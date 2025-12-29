@@ -1,0 +1,286 @@
+# ============================================================
+# GitHub Actions: ML Pipeline CI/CD
+# ============================================================
+#
+# Triggers:
+#   - Push to main: Full pipeline (test + train + deploy if better)
+#   - Pull Request: Test only
+#   - Manual: Choose what to run
+#
+# Jobs:
+#   1. test: Run unit tests
+#   2. train: Train model and compare with baseline
+#   3. deploy: Deploy if new model is better
+#
+# ============================================================
+
+name: ML Pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mlops/**'
+      - 'notebooks/**'
+      - 'app/**'
+      - 'data/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_training:
+        description: 'Run training pipeline'
+        required: false
+        default: 'true'
+      deploy_if_better:
+        description: 'Auto-deploy if model is better'
+        required: false
+        default: 'true'
+
+env:
+  PYTHON_VERSION: '3.10'
+  MLFLOW_TRACKING_URI: 'http://localhost:5000'
+
+jobs:
+  # ============================================================
+  # Job 1: Test
+  # ============================================================
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=mlops --cov-report=xml
+        continue-on-error: true
+
+      - name: Check code quality
+        run: |
+          pip install flake8
+          flake8 mlops/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        continue-on-error: true
+
+  # ============================================================
+  # Job 2: Train Model
+  # ============================================================
+  train:
+    name: 🏋️ Train Model
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' || github.event.inputs.run_training == 'true'
+
+    outputs:
+      is_better: ${{ steps.compare.outputs.is_better }}
+      new_roc_auc: ${{ steps.compare.outputs.new_roc_auc }}
+      baseline_roc_auc: ${{ steps.compare.outputs.baseline_roc_auc }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install mlflow
+
+      - name: Download data (if needed)
+        run: |
+          # Check if data exists, otherwise download/generate sample
+          if [ ! -f "data/user_features.csv" ]; then
+            echo "⚠️ Data not found. Using cached or sample data."
+            # In real scenario, download from S3/GCS
+          fi
+
+      - name: Train new model
+        id: train
+        run: |
+          # Generate run name with commit SHA
+          RUN_NAME="ci_${GITHUB_SHA::8}_$(date +%Y%m%d_%H%M%S)"
+          echo "run_name=$RUN_NAME" >> $GITHUB_OUTPUT
+          
+          # Train model
+          python mlops/train.py \
+            --name "$RUN_NAME" \
+            --model xgboost \
+            --tag "commit" "${GITHUB_SHA}" \
+            --tag "branch" "${GITHUB_REF_NAME}" \
+            --tag "trigger" "ci"
+
+      - name: Compare with baseline
+        id: compare
+        run: |
+          # Get baseline (production) metrics
+          BASELINE_AUC=$(python -c "
+          import json
+          from pathlib import Path
+          
+          metrics_file = Path('models/baseline_metrics.json')
+          if metrics_file.exists():
+              with open(metrics_file) as f:
+                  print(json.load(f).get('roc_auc', 0))
+          else:
+              print(0)
+          ")
+          
+          # Get new model metrics
+          NEW_AUC=$(python -c "
+          from mlops.experiment import ExperimentTracker
+          tracker = ExperimentTracker('churn-prediction')
+          runs = tracker.get_all_runs()
+          if not runs.empty:
+              print(runs.iloc[0].get('metrics.roc_auc', 0))
+          else:
+              print(0)
+          ")
+          
+          echo "baseline_roc_auc=$BASELINE_AUC" >> $GITHUB_OUTPUT
+          echo "new_roc_auc=$NEW_AUC" >> $GITHUB_OUTPUT
+          
+          # Compare
+          IS_BETTER=$(python -c "print('true' if $NEW_AUC > $BASELINE_AUC else 'false')")
+          echo "is_better=$IS_BETTER" >> $GITHUB_OUTPUT
+          
+          echo "📊 Baseline ROC-AUC: $BASELINE_AUC"
+          echo "📊 New ROC-AUC: $NEW_AUC"
+          echo "📊 Is Better: $IS_BETTER"
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts
+          path: |
+            models/
+            mlruns/
+          retention-days: 30
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isBetter = '${{ steps.compare.outputs.is_better }}' === 'true';
+            const baselineAuc = '${{ steps.compare.outputs.baseline_roc_auc }}';
+            const newAuc = '${{ steps.compare.outputs.new_roc_auc }}';
+            
+            const emoji = isBetter ? '✅' : '⚠️';
+            const verdict = isBetter ? 'IMPROVEMENT' : 'NO IMPROVEMENT';
+            
+            const body = `## 📊 Model Training Results
+            
+            ${emoji} **${verdict}**
+            
+            | Metric | Baseline | New | Change |
+            |--------|----------|-----|--------|
+            | ROC-AUC | ${baselineAuc} | ${newAuc} | ${(newAuc - baselineAuc).toFixed(4)} |
+            
+            ${isBetter ? '🚀 This model will be auto-deployed on merge.' : '❌ Model not deployed (no improvement).'}
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  # ============================================================
+  # Job 3: Deploy
+  # ============================================================
+  deploy:
+    name: 🚀 Deploy Model
+    runs-on: ubuntu-latest
+    needs: train
+    if: |
+      needs.train.outputs.is_better == 'true' && 
+      (github.event_name == 'push' || github.event.inputs.deploy_if_better == 'true')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download model artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: model-artifacts
+
+      - name: Update production model
+        run: |
+          echo "🚀 Deploying new model..."
+          
+          # Copy new model to production location
+          cp models/model.pkl models/production_model.pkl
+          
+          # Update baseline metrics
+          echo '{"roc_auc": ${{ needs.train.outputs.new_roc_auc }}}' > models/baseline_metrics.json
+          
+          echo "✅ Model deployed successfully!"
+
+      - name: Build and push Docker image
+        run: |
+          # In real scenario, build and push to registry
+          echo "📦 Building Docker image..."
+          # docker build -t churn-api:latest ./app
+          # docker push registry/churn-api:latest
+
+      - name: Deploy to production
+        run: |
+          # In real scenario, deploy to Kubernetes/ECS/etc
+          echo "🌐 Deploying to production..."
+          # kubectl apply -f k8s/deployment.yaml
+          # or: docker-compose up -d api
+
+      - name: Notify deployment
+        run: |
+          echo "📧 Sending deployment notification..."
+          echo "Model deployed: ROC-AUC = ${{ needs.train.outputs.new_roc_auc }}"
+          # In real scenario, send Slack/Email notification
+
+  # ============================================================
+  # Job 4: Generate Report (Weekly)
+  # ============================================================
+  report:
+    name: 📝 Generate Report
+    runs-on: ubuntu-latest
+    if: github.event.schedule == 'cron(0 0 * * 0)'  # Sundays at midnight
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate comparison report
+        run: python mlops/compare.py --report
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-report
+          path: reports/comparison_report.md

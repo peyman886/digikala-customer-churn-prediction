@@ -3,17 +3,16 @@
 # ============================================================================
 #
 # Services:
-#   - db:  PostgreSQL database (auto-initializes schema)
-#   - api: FastAPI prediction service
+#   - db:       PostgreSQL database
+#   - api:      FastAPI backend (port 8000)
+#   - frontend: Streamlit dashboard (port 8501)
 #
 # Usage:
-#   docker-compose up -d          # Start db + api
-#   docker-compose up -d db       # Start only database
-#   docker-compose --profile dev up -d  # Start with Jupyter + PgAdmin
+#   docker-compose up -d                     # Start all services
+#   docker-compose up -d db api              # Start without frontend
+#   docker-compose --profile dev up -d       # Include Jupyter + PgAdmin
 #
 # ============================================================================
-
-#version: '3.8'
 
 services:
   # ==========================================================================
@@ -23,25 +22,17 @@ services:
     image: postgres:15-alpine
     container_name: churn_db
     restart: unless-stopped
-
     environment:
       POSTGRES_USER: ${DB_USER:-ds_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-ds_pass}
       POSTGRES_DB: ${DB_NAME:-churn_db}
-
     volumes:
-      # Persist data between restarts
       - postgres_data:/var/lib/postgresql/data
-      # Auto-run schema.sql on first startup
-      # Files in docker-entrypoint-initdb.d/ run once when DB is created
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
-
     ports:
       - "${DB_PORT:-5432}:5432"
-
     networks:
       - churn_network
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-ds_user} -d ${DB_NAME:-churn_db}"]
       interval: 5s
@@ -50,7 +41,7 @@ services:
       start_period: 10s
 
   # ==========================================================================
-  # FastAPI Prediction Service
+  # FastAPI Backend
   # ==========================================================================
   api:
     build:
@@ -58,40 +49,54 @@ services:
       dockerfile: Dockerfile
     container_name: churn_api
     restart: unless-stopped
-
     environment:
-      # Database connection
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-churn_db}
       DB_USER: ${DB_USER:-ds_user}
       DB_PASSWORD: ${DB_PASSWORD:-ds_pass}
       DATABASE_URL: postgresql://${DB_USER:-ds_user}:${DB_PASSWORD:-ds_pass}@db:5432/${DB_NAME:-churn_db}
-
-      # Model paths (inside container)
       MODEL_PATH: /app/model.pkl
-      SCALER_PATH: /app/scaler.pkl
       FEATURES_PATH: /app/user_features.csv
-
-      # API settings
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-
     volumes:
-      # Mount app code (for development with hot-reload)
       - ./app:/app:ro
-
+      # Mount model files if they exist in models/ directory
+#      - ./models/model.pkl:/app/model.pkl:ro
+#      - ./models/user_features.csv:/app/user_features.csv:ro
     ports:
       - "${API_PORT:-8000}:8000"
-
     networks:
       - churn_network
-
     depends_on:
       db:
         condition: service_healthy
-
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================================================
+  # Streamlit Frontend
+  # ==========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: churn_frontend
+    restart: unless-stopped
+    environment:
+      API_URL: http://api:8000
+    ports:
+      - "${FRONTEND_PORT:-8501}:8501"
+    networks:
+      - churn_network
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -104,37 +109,49 @@ services:
     image: jupyter/scipy-notebook:latest
     container_name: churn_jupyter
     restart: unless-stopped
-
     environment:
       JUPYTER_ENABLE_LAB: "yes"
       JUPYTER_TOKEN: ${JUPYTER_TOKEN:-churn123}
-      # Database connection for notebooks
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-churn_db}
       DB_USER: ${DB_USER:-ds_user}
       DB_PASSWORD: ${DB_PASSWORD:-ds_pass}
       DATABASE_URL: postgresql://${DB_USER:-ds_user}:${DB_PASSWORD:-ds_pass}@db:5432/${DB_NAME:-churn_db}
-
     volumes:
       - ./notebooks:/home/jovyan/work/notebooks
       - ./data:/home/jovyan/work/data
       - ./app:/home/jovyan/work/app
       - ./db:/home/jovyan/work/db
-
     ports:
       - "${JUPYTER_PORT:-8888}:8888"
-
     networks:
       - churn_network
-
     depends_on:
       db:
         condition: service_healthy
-
-    # Only start with: docker-compose --profile dev up
     profiles:
       - dev
+
+
+  # ----------------------------------------------------------
+  # MLflow Server (Experiment Tracking)
+  # ----------------------------------------------------------
+  mlflow:
+    image: python:3.10-slim
+    container_name: churn_mlflow
+    working_dir: /app
+    command: >
+      bash -c "pip install mlflow psycopg2-binary boto3 &&
+               mlflow server --host 0.0.0.0 --port 5000
+               --backend-store-uri sqlite:///mlflow.db
+               --default-artifact-root /mlruns"
+    volumes:
+      - mlflow_data:/app
+    ports:
+      - "5000:5000"
+    environment:
+      MLFLOW_TRACKING_URI: http://localhost:5000
 
   # ==========================================================================
   # PgAdmin (Development Only)
@@ -143,25 +160,18 @@ services:
     image: dpage/pgadmin4:latest
     container_name: churn_pgadmin
     restart: unless-stopped
-
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local.dev}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
-
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-
     ports:
       - "${PGADMIN_PORT:-5050}:80"
-
     networks:
       - churn_network
-
     depends_on:
       - db
-
-    # Only start with: docker-compose --profile dev up
     profiles:
       - dev
 

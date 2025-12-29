@@ -1,105 +1,227 @@
-.PHONY: help install setup-db start stop test clean
+# ============================================================
+# Makefile - Churn Prediction Project
+# ============================================================
+# 
+# دستورات سریع برای مدیریت پروژه
+#
+# Usage:
+#   make help          # نمایش همه دستورات
+#   make setup         # نصب dependencies
+#   make train         # آموزش مدل
+#   make compare       # مقایسه مدل‌ها
+#   make up            # اجرای Docker
+#
+# ============================================================
 
-# Colors for terminal output
-RED=\033[0;31m
-GREEN=\033[0;32m
-YELLOW=\033[1;33m
-NC=\033[0m # No Color
+.PHONY: help setup install test train compare up down logs clean
 
+# Default target
 help:
-	@echo "$(GREEN)🛠️  Digikala Churn Prediction - Available Commands$(NC)"
-	@echo ""
-	@echo "$(YELLOW)Setup:$(NC)"
-	@echo "  make install      - Install Python dependencies"
-	@echo "  make setup-db     - Create database schema"
-	@echo "  make load-data    - Load data into database"
-	@echo ""
-	@echo "$(YELLOW)Docker:$(NC)"
-	@echo "  make start        - Start all services (Docker Compose)"
-	@echo "  make stop         - Stop all services"
-	@echo "  make restart      - Restart all services"
-	@echo "  make logs         - View container logs"
-	@echo ""
-	@echo "$(YELLOW)Development:$(NC)"
-	@echo "  make notebook     - Start Jupyter notebook"
-	@echo "  make api          - Run API locally (without Docker)"
-	@echo "  make test         - Run API tests"
-	@echo ""
-	@echo "$(YELLOW)Cleanup:$(NC)"
-	@echo "  make clean        - Remove cache and generated files"
-	@echo "  make clean-all    - Remove everything (including data)"
+	@echo "╔══════════════════════════════════════════════════════════╗"
+	@echo "║          Churn Prediction - Available Commands           ║"
+	@echo "╠══════════════════════════════════════════════════════════╣"
+	@echo "║ SETUP                                                    ║"
+	@echo "║   make setup      - Install all dependencies             ║"
+	@echo "║   make install    - Alias for setup                      ║"
+	@echo "║                                                          ║"
+	@echo "║ DATABASE                                                 ║"
+	@echo "║   make db-up      - Start PostgreSQL                     ║"
+	@echo "║   make db-load    - Load data into database              ║"
+	@echo "║                                                          ║"
+	@echo "║ MLOPS                                                    ║"
+	@echo "║   make train      - Train baseline model                 ║"
+	@echo "║   make train-prod - Train and register as production     ║"
+	@echo "║   make compare    - Compare all experiments              ║"
+	@echo "║   make report     - Generate comparison report           ║"
+	@echo "║   make mlflow     - Start MLflow UI                      ║"
+	@echo "║                                                          ║"
+	@echo "║ DOCKER                                                   ║"
+	@echo "║   make up         - Start all services                   ║"
+	@echo "║   make down       - Stop all services                    ║"
+	@echo "║   make logs       - View logs                            ║"
+	@echo "║   make restart    - Restart all services                 ║"
+	@echo "║                                                          ║"
+	@echo "║ TESTING                                                  ║"
+	@echo "║   make test       - Run all tests                        ║"
+	@echo "║   make lint       - Check code style                     ║"
+	@echo "║                                                          ║"
+	@echo "║ CLEANUP                                                  ║"
+	@echo "║   make clean      - Remove cache files                   ║"
+	@echo "║   make clean-all  - Remove everything (incl. data)       ║"
+	@echo "╚══════════════════════════════════════════════════════════╝"
+
+# ============================================================
+# Setup
+# ============================================================
+
+setup: install
+	@echo "✅ Setup complete!"
 
 install:
-	@echo "$(GREEN)📦 Installing dependencies...$(NC)"
+	@echo "📦 Installing dependencies..."
 	pip install -r requirements.txt
-	@echo "$(GREEN)✅ Dependencies installed!$(NC)"
+	@echo "✅ Dependencies installed!"
 
-setup-db:
-	@echo "$(GREEN)💾 Setting up database...$(NC)"
+# ============================================================
+# Database
+# ============================================================
+
+db-up:
+	@echo "🐘 Starting PostgreSQL..."
 	docker-compose up -d db
+	@echo "⏳ Waiting for database..."
 	sleep 5
-	psql -h localhost -U ds_user -d churn_db -f db/schema.sql || true
-	@echo "$(GREEN)✅ Database setup complete!$(NC)"
+	@echo "✅ Database ready!"
 
-load-data:
-	@echo "$(GREEN)📤 Loading data into database...$(NC)"
+db-load:
+	@echo "📥 Loading data into database..."
 	python db/load_data.py
-	@echo "$(GREEN)✅ Data loaded!$(NC)"
+	@echo "✅ Data loaded!"
 
-start:
-	@echo "$(GREEN)🚀 Starting services...$(NC)"
+db-shell:
+	docker-compose exec db psql -U ds_user -d churn_db
+
+# ============================================================
+# MLOps - Training
+# ============================================================
+
+train:
+	@echo "🏋️ Training baseline model..."
+	python mlops/train.py --name baseline --model xgboost
+	@echo "✅ Training complete!"
+
+train-prod:
+	@echo "🏋️ Training production model..."
+	python mlops/train.py --name production --model xgboost --register
+	@echo "✅ Production model saved!"
+
+train-rf:
+	@echo "🏋️ Training Random Forest model..."
+	python mlops/train.py --name rf_experiment --model rf
+
+train-all:
+	@echo "🏋️ Training all model types..."
+	python mlops/train.py --name logistic_exp --model logistic
+	python mlops/train.py --name rf_exp --model rf
+	python mlops/train.py --name xgb_exp --model xgboost
+	python mlops/train.py --name gbm_exp --model gbm
+	@echo "✅ All models trained!"
+
+# ============================================================
+# MLOps - Comparison
+# ============================================================
+
+compare:
+	@echo "📊 Comparing experiments..."
+	python mlops/compare.py --top 20
+
+compare-f1:
+	@echo "📊 Comparing by F1 score..."
+	python mlops/compare.py --metric f1
+
+report:
+	@echo "📝 Generating report..."
+	python mlops/compare.py --report
+	@echo "✅ Report saved to reports/comparison_report.md"
+
+mlflow:
+	@echo "🔬 Starting MLflow UI..."
+	mlflow ui --port 5000
+	@echo "🌐 Open http://localhost:5000"
+
+# ============================================================
+# Docker
+# ============================================================
+
+up:
+	@echo "🚀 Starting all services..."
 	docker-compose up -d
-	@echo "$(GREEN)✅ Services started!$(NC)"
-	@echo "$(YELLOW)API: http://localhost:8000$(NC)"
-	@echo "$(YELLOW)Database: localhost:5432$(NC)"
+	@echo "✅ Services started!"
+	@echo "   📊 Dashboard: http://localhost:8501"
+	@echo "   🔧 API:       http://localhost:8000/docs"
+	@echo "   🔬 MLflow:    http://localhost:5000"
 
-stop:
-	@echo "$(RED)🛑 Stopping services...$(NC)"
+down:
+	@echo "🛑 Stopping services..."
 	docker-compose down
-	@echo "$(GREEN)✅ Services stopped!$(NC)"
-
-restart: stop start
+	@echo "✅ Services stopped!"
 
 logs:
-	@echo "$(GREEN)📜 Showing logs...$(NC)"
 	docker-compose logs -f
 
-notebook:
-	@echo "$(GREEN)📓 Starting Jupyter notebook...$(NC)"
-	jupyter notebook notebooks/
+logs-api:
+	docker-compose logs -f api
 
-api:
-	@echo "$(GREEN)🚀 Starting API locally...$(NC)"
-	cd app && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+logs-frontend:
+	docker-compose logs -f frontend
+
+restart:
+	@echo "🔄 Restarting services..."
+	docker-compose restart
+	@echo "✅ Services restarted!"
+
+rebuild:
+	@echo "🔨 Rebuilding containers..."
+	docker-compose build --no-cache
+	docker-compose up -d
+	@echo "✅ Containers rebuilt!"
+
+# ============================================================
+# Testing
+# ============================================================
 
 test:
-	@echo "$(GREEN)🧪 Running API tests...$(NC)"
-	python scripts/test_api.py
+	@echo "🧪 Running tests..."
+	pytest tests/ -v --cov=mlops --cov-report=term-missing
+	@echo "✅ Tests complete!"
+
+test-fast:
+	@echo "🧪 Running fast tests only..."
+	pytest tests/ -v -m "not slow"
+
+lint:
+	@echo "🔍 Checking code style..."
+	flake8 mlops/ app/ --count --select=E9,F63,F7,F82 --show-source --statistics
+	@echo "✅ Lint complete!"
+
+# ============================================================
+# Jupyter
+# ============================================================
+
+notebook:
+	@echo "📓 Starting Jupyter..."
+	jupyter notebook notebooks/
+
+# ============================================================
+# Cleanup
+# ============================================================
 
 clean:
-	@echo "$(YELLOW)🧹 Cleaning cache files...$(NC)"
+	@echo "🧹 Cleaning cache files..."
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	@echo "$(GREEN)✅ Cache cleaned!$(NC)"
+	find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} + 2>/dev/null || true
+	@echo "✅ Cache cleaned!"
 
 clean-all: clean
-	@echo "$(RED)⚠️  WARNING: This will delete all data and models!$(NC)"
-	@read -p "Are you sure? (y/N) " -n 1 -r; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		rm -rf data/*.csv app/*.pkl reports/*.png; \
-		docker-compose down -v; \
-		echo "$(GREEN)✅ Everything cleaned!$(NC)"; \
-	else \
-		echo "$(YELLOW)Cancelled.$(NC)"; \
-	fi
+	@echo "🧹 Cleaning everything..."
+	rm -rf mlruns/ 2>/dev/null || true
+	rm -rf models/*.pkl 2>/dev/null || true
+	docker-compose down -v 2>/dev/null || true
+	@echo "✅ All cleaned!"
 
-# Quick setup for first time users
-quickstart: install setup-db start
-	@echo "$(GREEN)🎉 Quickstart complete!$(NC)"
-	@echo "$(YELLOW)Next steps:$(NC)"
-	@echo "  1. Place CSV files in data/ folder"
-	@echo "  2. Run: make load-data"
-	@echo "  3. Run notebooks to train model"
-	@echo "  4. Test API: make test"
+# ============================================================
+# Quick Workflow
+# ============================================================
+
+# Full setup from scratch
+full-setup: setup db-up db-load
+	@echo "✅ Full setup complete! Now run notebooks to train model."
+
+# Quick demo
+demo: db-up
+	@echo "🎮 Running demo..."
+	python mlops/train.py --name demo_run --model xgboost
+	python mlops/compare.py
+	@echo "✅ Demo complete!"
