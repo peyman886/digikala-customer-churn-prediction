@@ -1,223 +1,217 @@
-# 🎯 Digikala Customer Churn Prediction | پیش‌بینی ریزش مشتریان دیجیکالا
+# 🎯 Digikala Customer Churn Prediction
 
-[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green.svg)](https://fastapi.tiangolo.com/)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+End-to-end ML pipeline for predicting customer churn.
 
-End-to-end machine learning pipeline for predicting customer churn using orders, CRM, and comments data.
-
-پایپلاین کامل یادگیری ماشین برای پیش‌بینی ریزش مشتریان با استفاده از داده‌های سفارشات، CRM و نظرات.
+پایپلاین کامل یادگیری ماشین برای پیش‌بینی ریزش مشتریان
 
 ---
 
-## 📊 Project Overview | مرور کلی پروژه
+## 📊 Results Summary
 
-This project implements a complete churn prediction system including:
-- **Database Design**: PostgreSQL schema with normalized tables
-- **Feature Engineering**: 12+ user-level features from orders, CRM, and text comments
-- **Machine Learning**: XGBoost classifier with 87% ROC-AUC
-- **API Service**: FastAPI REST endpoint for real-time predictions
-- **Deployment**: Docker Compose for containerized deployment
-
-### 🎯 Churn Definition
-A user is considered **churned** if they have **no orders in the 30 days** following their last recorded order.
-
-یک کاربر زمانی **ریزش کرده** در نظر گرفته می‌شود که در **30 روز بعد** از آخرین سفارشش، هیچ سفارش جدیدی نداشته باشد.
+| Metric | Value |
+|--------|-------|
+| **ROC-AUC** | 0.879 |
+| **F1-Score** | 0.849 |
+| **Churn Rate** | 65% |
+| **Users** | 338,101 |
+| **Features** | 26 |
 
 ---
 
-## 🏗️ Architecture | معماری
+## 🚀 Quick Start
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Orders Data    │────▶│   PostgreSQL     │────▶│   FastAPI ML    │
-│  CRM Data       │     │   Database       │     │   Service       │
-│  Comments Data  │     │                  │     │                 │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                               │                          │
-                               ▼                          ▼
-                        ┌──────────────┐          ┌─────────────┐
-                        │  Feature Eng │          │  Prediction │
-                        │  + Training  │          │  Endpoint   │
-                        └──────────────┘          └─────────────┘
-```
-
----
-
-## 🚀 Quick Start | شروع سریع
-
-### Prerequisites | پیش‌نیازها
+### Prerequisites
 - Docker & Docker Compose
-- Python 3.10+
-- 4GB RAM minimum
+- Python 3.10+ (for running notebooks)
 
-### 1️⃣ Clone Repository
+### 1. Clone & Setup
+
 ```bash
 git clone https://github.com/peyman886/digikala-customer-churn-prediction.git
 cd digikala-customer-churn-prediction
+
+# Copy environment file
+cp .env.example .env
 ```
 
-### 2️⃣ Start Services with Docker
+### 2. Add Data Files
+
+Download data from Google Drive and place in `data/` folder:
+- `data/orders.csv`
+- `data/crm.csv`
+- `data/order_comments.csv`
+
+### 3. Start Database
+
 ```bash
-docker-compose up --build
+docker-compose up -d db
+# Wait for database to be ready (~10 seconds)
 ```
 
-This will start:
-- **PostgreSQL** database on port `5432`
-- **FastAPI** service on port `8000`
+### 4. Load Data
 
-### 3️⃣ Load Data
 ```bash
 python db/load_data.py
 ```
 
-### 4️⃣ Test API
+### 5. Run Notebooks (Train Model)
+
 ```bash
-curl -X POST "http://localhost:8000/predict" \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "12345"}'
+# Option A: Using Jupyter in Docker
+docker-compose --profile dev up -d jupyter
+# Open http://localhost:8888 (token: churn123)
+
+# Option B: Local Jupyter
+pip install -r requirements.txt
+jupyter notebook notebooks/
+```
+
+Run notebooks in order:
+1. `01_eda_feature_engineering.ipynb` → generates `user_features.csv`
+2. `02_model_training.ipynb` → generates `model.pkl`
+
+### 6. Start API
+
+```bash
+docker-compose up -d api
+```
+
+### 7. Test API
+
+```bash
+# Health check
+curl http://localhost:8000/health
+
+# Predict churn
+curl -X POST http://localhost:8000/predict \
+     -H "Content-Type: application/json" \
+     -d '{"user_id": "1385028"}'
 ```
 
 **Example Response:**
 ```json
 {
-  "user_id": "12345",
+  "user_id": "1385028",
   "will_churn": true,
-  "probability": 0.8723,
+  "probability": 0.8234,
   "risk_level": "HIGH"
 }
 ```
 
 ---
 
-## 📊 Model Performance | عملکرد مدل
-
-| Model | ROC-AUC | Precision | Recall | F1-Score |
-|-------|---------|-----------|--------|----------|
-| Logistic Regression | 0.78 | 0.72 | 0.68 | 0.70 |
-| Random Forest | 0.83 | 0.79 | 0.75 | 0.77 |
-| **XGBoost (Best)** | **0.87** | **0.84** | **0.81** | **0.82** |
-
-### 🧠 Top 5 Churn Predictors
-1. **Days since last order** (38% importance) - روز از آخرین سفارش
-2. **Average order frequency** (22% importance) - میانگین فاصله سفارشات
-3. **On-time delivery ratio** (15% importance) - نسبت تحویل به موقع
-4. **Total complaints** (12% importance) - تعداد شکایات
-5. **Average sentiment score** (8% importance) - امتیاز احساسات
-
----
-
-## 📁 Project Structure | ساختار پروژه
+## 📁 Project Structure
 
 ```
-digikala-customer-churn-prediction/
-├── data/                          # Raw CSV files
+├── data/                       # Data files (not in git)
 │   ├── orders.csv
 │   ├── crm.csv
-│   ├── comments.csv
-│   └── user_features.csv         # Generated features
-├── notebooks/                     # Jupyter notebooks
-│   ├── 01_eda.ipynb              # Exploratory Data Analysis
-│   ├── 02_feature_engineering.ipynb
-│   └── 03_model_training.ipynb
-├── app/                          # FastAPI application
-│   ├── main.py                   # API endpoints
-│   ├── model.pkl                 # Trained XGBoost model
-│   ├── scaler.pkl                # Feature scaler
+│   ├── order_comments.csv
+│   └── user_features.csv       # Generated by notebook
+│
+├── notebooks/
+│   ├── 00_schema_design_eda.ipynb
+│   ├── 01_eda_feature_engineering.ipynb
+│   └── 02_model_training.ipynb
+│
+├── app/                        # FastAPI application
+│   ├── main.py
+│   ├── model.pkl               # Trained model
+│   ├── user_features.csv       # For predictions
+│   ├── Dockerfile
 │   └── requirements.txt
-├── db/                           # Database scripts
-│   ├── schema.sql                # PostgreSQL schema
-│   └── load_data.py              # Data loading script
-├── reports/                      # Model evaluation reports
-│   └── shap_summary.png          # SHAP feature importance
-├── docker-compose.yml            # Docker orchestration
-├── Dockerfile                    # API container definition
-├── .env                          # Environment variables
-├── .gitignore
+│
+├── db/
+│   ├── schema.sql              # PostgreSQL schema
+│   └── load_data.py            # Data loading script
+│
+├── scripts/
+│   └── test_api.py             # API test script
+│
+├── reports/                    # Generated plots
+│   ├── model_comparison.png
+│   ├── feature_importance.png
+│   └── confusion_matrix.png
+│
+├── docker-compose.yml
+├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## 🔧 Development | توسعه
+## 🎯 Churn Definition
 
-### Run Notebooks Locally
-```bash
-jupyter notebook notebooks/
+A user is **churned** if they have **no orders in the 30 days** following the observation date.
+
+```
+Data Timeline:
+├── Mar 16 ─────────────────────────────> Aug 13 ────────────> Sep 12
+│   Features calculated from this period   │   Label period    │
+│   (150 days of history)                  │   (30 days)       │
 ```
 
-### Train New Model
-```bash
-python -m notebooks.03_model_training
-```
+**Key:** Features only use data BEFORE observation date → **No data leakage**
 
-### Run API without Docker
-```bash
-cd app
-pip install -r requirements.txt
-uvicorn main:app --reload
-```
+---
 
-### Run Tests
-```bash
-pytest tests/
+## 📈 Features (26 total)
+
+| Category | Features |
+|----------|----------|
+| **Temporal** | total_orders, days_since_last_order, avg_order_gap, orders_last_30d, orders_last_7d |
+| **Delivery** | on_time_ratio, late_delivery_count, unknown_otd_ratio |
+| **CRM** | total_complaints, fake_complaints, complaints_per_order |
+| **Ratings** | avg_shop_rating, avg_courier_rating, min_ratings, has_low_rating |
+| **Comments** | comment_count, comment_ratio, avg_comment_length |
+
+### Top 5 Predictive Features
+1. `days_since_last_order` - Recency is king!
+2. `orders_last_30d` - Recent activity
+3. `orders_last_7d` - Very recent activity
+4. `total_orders` - Engagement level
+5. `avg_order_gap_days` - Purchase frequency
+
+---
+
+## 🗄️ Database Schema
+
+```sql
+-- Main table
+orders (order_id PK, user_id, is_otd, order_date, delivery_status)
+
+-- 1:1 with orders
+crm (order_id PK/FK, delivery_request_count, fake_request_count, rate_to_shop, rate_to_courier)
+
+-- 1:N with orders  
+comments (id PK, order_id FK, description)
 ```
 
 ---
 
-## 🗄️ Database Schema | طراحی دیتابیس
+## 🔌 API Endpoints
 
-### Tables
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | API info |
+| GET | `/health` | Health check |
+| GET | `/docs` | Swagger UI |
+| POST | `/predict` | Predict churn |
 
-**orders** (جدول سفارشات)
-- `order_id` (PK): شناسه سفارش
-- `user_id`: شناسه کاربر
-- `is_otd`: تحویل به موقع (boolean)
-- `order_date`: تاریخ سفارش
-- `delivery_status`: وضعیت تحویل
-
-**crm** (جدول CRM)
-- `id` (PK): شناسه یکتا
-- `order_id` (FK): ارجاع به orders
-- `crm_delivery_request_count`: تعداد درخواست‌های تحویل
-- `crm_fake_delivery_request_count`: تعداد درخواست‌های جعلی
-- `rate_to_shop`: امتیاز فروشگاه
-- `rate_to_courier`: امتیاز پیک
-
-**comments** (جدول نظرات)
-- `id` (PK): شناسه یکتا
-- `order_id` (FK): ارجاع به orders
-- `description`: متن نظر
-
----
-
-## 📡 API Endpoints
-
-### `GET /`
-Root endpoint with API information
-
-### `GET /health`
-Health check endpoint
-```json
-{"status": "healthy", "model_loaded": true}
-```
-
-### `POST /predict`
-Predict churn probability for a user
+### POST /predict
 
 **Request:**
 ```json
-{"user_id": "12345"}
+{"user_id": "1385028"}
 ```
 
 **Response:**
 ```json
 {
-  "user_id": "12345",
-  "will_churn": false,
-  "probability": 0.3421,
-  "risk_level": "LOW"
+  "user_id": "1385028",
+  "will_churn": true,
+  "probability": 0.8234,
+  "risk_level": "HIGH"
 }
 ```
 
@@ -228,72 +222,82 @@ Predict churn probability for a user
 
 ---
 
-## 🛠️ Technologies | تکنولوژی‌ها
+## 🐳 Docker Commands
 
-- **Database**: PostgreSQL 15
-- **ML Libraries**: scikit-learn, XGBoost, SHAP
-- **NLP**: TextBlob (sentiment analysis)
-- **API Framework**: FastAPI, Uvicorn
-- **Deployment**: Docker, Docker Compose
-- **Data Processing**: Pandas, NumPy
-- **Visualization**: Matplotlib, Seaborn
+```bash
+# Start all services
+docker-compose up -d
 
----
+# Start only database
+docker-compose up -d db
 
-## 📈 Future Improvements | بهبودهای آینده
+# Start with development tools (Jupyter + PgAdmin)
+docker-compose --profile dev up -d
 
-- [ ] Implement time-based train/test split
-- [ ] Add A/B testing framework
-- [ ] Deploy to AWS/GCP with CI/CD pipeline
-- [ ] Add monitoring with Prometheus/Grafana
-- [ ] Implement automated model retraining pipeline
-- [ ] Add more sophisticated NLP features (BERT embeddings)
-- [ ] Create user retention campaign recommendations
-- [ ] Build dashboard for business insights
+# View logs
+docker-compose logs -f api
 
----
+# Stop all
+docker-compose down
 
-## 🤝 Contributing | مشارکت
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+# Stop and remove volumes (fresh start)
+docker-compose down -v
+```
 
 ---
 
-## 📝 License
+## 🔧 Development
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Local Setup (without Docker)
 
----
+```bash
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
 
-## 👤 Author | نویسنده
+# Install dependencies
+pip install -r requirements.txt
 
-**Peyman**
-- GitHub: [@peyman886](https://github.com/peyman886)
-- Repository: [digikala-customer-churn-prediction](https://github.com/peyman886/digikala-customer-churn-prediction)
+# Run API locally
+cd app
+uvicorn main:app --reload
 
----
-
-## 🙏 Acknowledgments
-
-- Digikala for the interview task specification
-- Open-source community for amazing ML tools
-- FastAPI and scikit-learn teams
-
----
-
-## 📚 References
-
-- [XGBoost Documentation](https://xgboost.readthedocs.io/)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [SHAP Documentation](https://shap.readthedocs.io/)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+# Run tests
+python scripts/test_api.py
+```
 
 ---
 
-**⭐ If you find this project helpful, please give it a star!**
+## 📝 Assumptions & Decisions
+
+1. **Churn Window:** 30 days (industry standard for e-commerce)
+2. **is_otd = -1:** Treated as "unknown", excluded from on_time_ratio calculation
+3. **Orphan Comments:** 5,037 comments without matching orders → filtered during load
+4. **Missing Ratings:** ~60-74% NULL → filled with median (neutral value)
+5. **Model Choice:** XGBoost (best ROC-AUC among 4 tested models)
+
+---
+
+## 🚧 Future Improvements
+
+- [ ] Add model versioning (MLflow)
+- [ ] Time-based train/test split (more realistic)
+- [ ] Sentiment analysis on Persian comments
+- [ ] Real-time feature computation
+- [ ] A/B testing framework
+- [ ] Monitoring dashboard (Grafana)
+- [ ] Automated retraining pipeline
+
+---
+
+## 👤 Author
+
+**Peyman**  
+GitHub: [@peyman886](https://github.com/peyman886)
+
+---
+
+## 📄 License
+
+MIT License

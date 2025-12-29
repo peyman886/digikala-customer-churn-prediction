@@ -12,7 +12,7 @@ import sys
 from typing import Dict, Any
 
 # API Configuration
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = "http://localhost:9000"
 
 def test_health_endpoint() -> bool:
     """

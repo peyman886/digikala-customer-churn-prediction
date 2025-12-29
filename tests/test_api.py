@@ -1,77 +1,93 @@
+#!/usr/bin/env python3
 """
-Unit tests for FastAPI endpoints
+Quick API Test Script
+
+Usage:
+    python scripts/test_api.py
+    python scripts/test_api.py --user 1385028
 """
-import pytest
-from fastapi.testclient import TestClient
+
+import argparse
+import requests
 import sys
-import os
 
-# Add app directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'app'))
-
-# Note: Import will fail until model.pkl exists
-# from main import app
-
-# client = TestClient(app)
+API_URL = "http://localhost:9000"
 
 
-def test_placeholder():
-    """
-    Placeholder test - replace with actual tests once model is trained
-    """
-    assert True
+def test_health():
+    """Test health endpoint."""
+    print("Testing /health...")
+    try:
+        r = requests.get(f"{API_URL}/health", timeout=5)
+        if r.status_code == 200:
+            data = r.json()
+            print(f"  ✅ Status: {data['status']}")
+            print(f"     Model loaded: {data['model_loaded']}")
+            print(f"     Users loaded: {data['users_loaded']:,}")
+            return True
+        else:
+            print(f"  ❌ Status code: {r.status_code}")
+            return False
+    except requests.exceptions.ConnectionError:
+        print("  ❌ Cannot connect to API. Is it running?")
+        return False
 
 
-# Uncomment these tests after training model and generating artifacts
-
-# def test_health_endpoint():
-#     """Test health check endpoint"""
-#     response = client.get("/health")
-#     assert response.status_code == 200
-#     assert "status" in response.json()
-#     assert response.json()["status"] == "healthy"
-
-
-# def test_root_endpoint():
-#     """Test root endpoint"""
-#     response = client.get("/")
-#     assert response.status_code == 200
-#     assert "message" in response.json()
-
-
-# def test_predict_endpoint_valid_user():
-#     """Test prediction with valid user"""
-#     response = client.post(
-#         "/predict",
-#         json={"user_id": "12345"}
-#     )
-#     assert response.status_code in [200, 404]  # 404 if user not in test data
-#     
-#     if response.status_code == 200:
-#         data = response.json()
-#         assert "user_id" in data
-#         assert "will_churn" in data
-#         assert "probability" in data
-#         assert "risk_level" in data
-#         assert 0 <= data["probability"] <= 1
-#         assert data["risk_level"] in ["LOW", "MEDIUM", "HIGH"]
+def test_predict(user_id: str):
+    """Test predict endpoint."""
+    print(f"\nTesting /predict for user {user_id}...")
+    try:
+        r = requests.post(
+            f"{API_URL}/predict",
+            json={"user_id": user_id},
+            timeout=10
+        )
+        
+        if r.status_code == 200:
+            data = r.json()
+            print(f"  ✅ Prediction successful:")
+            print(f"     User ID:     {data['user_id']}")
+            print(f"     Will Churn:  {data['will_churn']}")
+            print(f"     Probability: {data['probability']:.2%}")
+            print(f"     Risk Level:  {data['risk_level']}")
+            return True
+        elif r.status_code == 404:
+            print(f"  ⚠️ User not found: {user_id}")
+            return False
+        else:
+            print(f"  ❌ Error: {r.status_code} - {r.text}")
+            return False
+    except Exception as e:
+        print(f"  ❌ Error: {e}")
+        return False
 
 
-# def test_predict_endpoint_invalid_input():
-#     """Test prediction with invalid input"""
-#     response = client.post("/predict", json={})
-#     assert response.status_code == 422  # Validation error
+def main():
+    parser = argparse.ArgumentParser(description="Test Churn Prediction API")
+    parser.add_argument("--user", type=str, default="1385028", help="User ID to test")
+    args = parser.parse_args()
+    
+    print("=" * 50)
+    print("Churn Prediction API Test")
+    print("=" * 50)
+    
+    # Test health
+    if not test_health():
+        print("\n❌ API not healthy. Exiting.")
+        sys.exit(1)
+    
+    # Test prediction
+    test_predict(args.user)
+    
+    # Test a few more users
+    print("\nTesting additional users...")
+    for user_id in ["54227", "30492532", "999999999"]:
+        test_predict(user_id)
+    
+    print("\n" + "=" * 50)
+    print("Tests complete!")
+    print("=" * 50)
 
 
-# @pytest.mark.parametrize("user_id", [
-#     "12345",
-#     "67890",
-#     "99999",
-# ])
-# def test_predict_multiple_users(user_id):
-#     """Test prediction for multiple users"""
-#     response = client.post(
-#         "/predict",
-#         json={"user_id": user_id}
-#     )
-#     assert response.status_code in [200, 404]
+if __name__ == "__main__":
+    main()
