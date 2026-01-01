@@ -5,7 +5,7 @@
 # Services:
 #   - db:       PostgreSQL database
 #   - api:      FastAPI backend (port 8000)
-#   - frontend: Streamlit dashboard (port 8501)
+#   - frontend: Streamlit dashboard (port 5000)
 #
 # Usage:
 #   docker-compose up -d                     # Start all services
@@ -118,11 +118,16 @@ services:
       DB_USER: ${DB_USER:-ds_user}
       DB_PASSWORD: ${DB_PASSWORD:-ds_pass}
       DATABASE_URL: postgresql://${DB_USER:-ds_user}:${DB_PASSWORD:-ds_pass}@db:5432/${DB_NAME:-churn_db}
+      # MLflow connection
+      MLFLOW_TRACKING_URI: http://mlflow:5000
     volumes:
       - ./notebooks:/home/jovyan/work/notebooks
       - ./data:/home/jovyan/work/data
       - ./app:/home/jovyan/work/app
       - ./db:/home/jovyan/work/db
+      - ./mlops:/home/jovyan/work/mlops
+      - ./mlruns:/home/jovyan/work/mlruns
+      - ./models:/home/jovyan/work/models
     ports:
       - "${JUPYTER_PORT:-8888}:8888"
     networks:
@@ -130,29 +135,40 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    profiles:
-      - dev
+#    profiles:
+#      - dev
 
 
-  # ----------------------------------------------------------
-  # MLflow Server (Experiment Tracking)
-  # ----------------------------------------------------------
+  # ==========================================================================
+  # MLflow Tracking Server
+  # ==========================================================================
   mlflow:
     image: python:3.10-slim
     container_name: churn_mlflow
-    working_dir: /app
+    restart: unless-stopped
+    working_dir: /mlflow
     command: >
-      bash -c "pip install mlflow psycopg2-binary boto3 &&
-               mlflow server --host 0.0.0.0 --port 5000
-               --backend-store-uri sqlite:///mlflow.db
-               --default-artifact-root /mlruns"
+      bash -c "
+        pip install --quiet mlflow &&
+        mlflow server 
+          --host 0.0.0.0 
+          --port 5000 
+          --backend-store-uri sqlite:///mlflow.db
+          --default-artifact-root /mlflow/artifacts
+      "
     volumes:
-      - mlflow_data:/app
+      - ./mlruns:/mlflow/artifacts
+      - mlflow_data:/mlflow
     ports:
-      - "5000:5000"
-    environment:
-      MLFLOW_TRACKING_URI: http://localhost:5000
-
+      - "${MLFLOW_PORT:-5000}:5000"
+    networks:
+      - churn_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
   # ==========================================================================
   # PgAdmin (Development Only)
   # ==========================================================================
@@ -172,8 +188,8 @@ services:
       - churn_network
     depends_on:
       - db
-    profiles:
-      - dev
+#    profiles:
+#      - dev
 
 # ============================================================================
 # Networks
@@ -189,4 +205,6 @@ volumes:
   postgres_data:
     driver: local
   pgadmin_data:
+    driver: local
+  mlflow_data:
     driver: local

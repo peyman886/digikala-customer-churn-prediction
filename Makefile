@@ -1,145 +1,101 @@
 # ============================================================
-# Makefile - Churn Prediction Project
-# ============================================================
-# 
-# دستورات سریع برای مدیریت پروژه
-#
-# Usage:
-#   make help          # نمایش همه دستورات
-#   make setup         # نصب dependencies
-#   make train         # آموزش مدل
-#   make compare       # مقایسه مدل‌ها
-#   make up            # اجرای Docker
-#
+# Makefile - Churn Prediction with MLOps
 # ============================================================
 
-.PHONY: help setup install test train compare up down logs clean
+.PHONY: help setup mlflow compare promote up down clean
 
-# Default target
+# Default
 help:
+	@echo ""
 	@echo "╔══════════════════════════════════════════════════════════╗"
-	@echo "║          Churn Prediction - Available Commands           ║"
+	@echo "║          Churn Prediction - Quick Commands               ║"
 	@echo "╠══════════════════════════════════════════════════════════╣"
-	@echo "║ SETUP                                                    ║"
-	@echo "║   make setup      - Install all dependencies             ║"
-	@echo "║   make install    - Alias for setup                      ║"
 	@echo "║                                                          ║"
-	@echo "║ DATABASE                                                 ║"
-	@echo "║   make db-up      - Start PostgreSQL                     ║"
-	@echo "║   make db-load    - Load data into database              ║"
+	@echo "║  SETUP                                                   ║"
+	@echo "║    make setup         Install dependencies               ║"
 	@echo "║                                                          ║"
-	@echo "║ MLOPS                                                    ║"
-	@echo "║   make train      - Train baseline model                 ║"
-	@echo "║   make train-prod - Train and register as production     ║"
-	@echo "║   make compare    - Compare all experiments              ║"
-	@echo "║   make report     - Generate comparison report           ║"
-	@echo "║   make mlflow     - Start MLflow UI                      ║"
+	@echo "║  MLOPS                                                   ║"
+	@echo "║    make mlflow        Start MLflow UI (localhost:5000)   ║"
+	@echo "║    make compare       Compare all experiments            ║"
+	@echo "║    make promote       Promote best model to production   ║"
 	@echo "║                                                          ║"
-	@echo "║ DOCKER                                                   ║"
-	@echo "║   make up         - Start all services                   ║"
-	@echo "║   make down       - Stop all services                    ║"
-	@echo "║   make logs       - View logs                            ║"
-	@echo "║   make restart    - Restart all services                 ║"
+	@echo "║  DOCKER                                                  ║"
+	@echo "║    make up            Start all services                 ║"
+	@echo "║    make up-dev        Start with Jupyter + PgAdmin       ║"
+	@echo "║    make down          Stop all services                  ║"
+	@echo "║    make logs          View logs                          ║"
 	@echo "║                                                          ║"
-	@echo "║ TESTING                                                  ║"
-	@echo "║   make test       - Run all tests                        ║"
-	@echo "║   make lint       - Check code style                     ║"
+	@echo "║  DATABASE                                                ║"
+	@echo "║    make db-up         Start PostgreSQL only              ║"
+	@echo "║    make db-load       Load data into database            ║"
 	@echo "║                                                          ║"
-	@echo "║ CLEANUP                                                  ║"
-	@echo "║   make clean      - Remove cache files                   ║"
-	@echo "║   make clean-all  - Remove everything (incl. data)       ║"
+	@echo "║  CLEANUP                                                 ║"
+	@echo "║    make clean         Remove cache files                 ║"
+	@echo "║                                                          ║"
 	@echo "╚══════════════════════════════════════════════════════════╝"
+	@echo ""
 
 # ============================================================
 # Setup
 # ============================================================
 
-setup: install
-	@echo "✅ Setup complete!"
-
-install:
+setup:
 	@echo "📦 Installing dependencies..."
 	pip install -r requirements.txt
-	@echo "✅ Dependencies installed!"
+	@echo "✅ Setup complete!"
 
 # ============================================================
-# Database
+# MLOps
 # ============================================================
 
-db-up:
-	@echo "🐘 Starting PostgreSQL..."
-	docker-compose up -d db
-	@echo "⏳ Waiting for database..."
-	sleep 5
-	@echo "✅ Database ready!"
-
-db-load:
-	@echo "📥 Loading data into database..."
-	python db/load_data.py
-	@echo "✅ Data loaded!"
-
-db-shell:
-	docker-compose exec db psql -U ds_user -d churn_db
-
-# ============================================================
-# MLOps - Training
-# ============================================================
-
-train:
-	@echo "🏋️ Training baseline model..."
-	python mlops/train.py --name baseline --model xgboost
-	@echo "✅ Training complete!"
-
-train-prod:
-	@echo "🏋️ Training production model..."
-	python mlops/train.py --name production --model xgboost --register
-	@echo "✅ Production model saved!"
-
-train-rf:
-	@echo "🏋️ Training Random Forest model..."
-	python mlops/train.py --name rf_experiment --model rf
-
-train-all:
-	@echo "🏋️ Training all model types..."
-	python mlops/train.py --name logistic_exp --model logistic
-	python mlops/train.py --name rf_exp --model rf
-	python mlops/train.py --name xgb_exp --model xgboost
-	python mlops/train.py --name gbm_exp --model gbm
-	@echo "✅ All models trained!"
-
-# ============================================================
-# MLOps - Comparison
-# ============================================================
+mlflow:
+	@echo "🔬 Starting MLflow UI..."
+	@echo "   Open: http://localhost:5000"
+	mlflow ui --port 5000 --backend-store-uri ./mlruns
 
 compare:
 	@echo "📊 Comparing experiments..."
-	python mlops/compare.py --top 20
+	python mlops/compare.py
 
 compare-f1:
 	@echo "📊 Comparing by F1 score..."
 	python mlops/compare.py --metric f1
 
-report:
-	@echo "📝 Generating report..."
-	python mlops/compare.py --report
-	@echo "✅ Report saved to reports/comparison_report.md"
+promote:
+	@echo "🚀 Promoting best model to production..."
+	python mlops/compare.py --promote best
 
-mlflow:
-	@echo "🔬 Starting MLflow UI..."
-	mlflow ui --port 5000
-	@echo "🌐 Open http://localhost:5000"
+promote-run:
+	@echo "🚀 Promote specific run: make promote-run RUN=run_name"
+	python mlops/compare.py --promote $(RUN)
+
+report:
+	@echo "📝 Generating comparison report..."
+	python mlops/compare.py --report
 
 # ============================================================
 # Docker
 # ============================================================
 
 up:
-	@echo "🚀 Starting all services..."
+	@echo "🚀 Starting services..."
 	docker-compose up -d
+	@echo ""
 	@echo "✅ Services started!"
-	@echo "   📊 Dashboard: http://localhost:8501"
-	@echo "   🔧 API:       http://localhost:8000/docs"
-	@echo "   🔬 MLflow:    http://localhost:5000"
+	@echo "   🔧 API:      http://localhost:8000/docs"
+	@echo "   🔬 MLflow:   http://localhost:5000"
+	@echo ""
+
+up-dev:
+	@echo "🚀 Starting services with dev tools..."
+	docker-compose --profile dev up -d
+	@echo ""
+	@echo "✅ Services started!"
+	@echo "   🔧 API:      http://localhost:8000/docs"
+	@echo "   🔬 MLflow:   http://localhost:5000"
+	@echo "   📓 Jupyter:  http://localhost:8888 (token: churn123)"
+	@echo "   🐘 PgAdmin:  http://localhost:5050"
+	@echo ""
 
 down:
 	@echo "🛑 Stopping services..."
@@ -152,19 +108,26 @@ logs:
 logs-api:
 	docker-compose logs -f api
 
-logs-frontend:
-	docker-compose logs -f frontend
+logs-mlflow:
+	docker-compose logs -f mlflow
 
 restart:
-	@echo "🔄 Restarting services..."
 	docker-compose restart
-	@echo "✅ Services restarted!"
 
-rebuild:
-	@echo "🔨 Rebuilding containers..."
-	docker-compose build --no-cache
-	docker-compose up -d
-	@echo "✅ Containers rebuilt!"
+# ============================================================
+# Database
+# ============================================================
+
+db-up:
+	@echo "🐘 Starting PostgreSQL..."
+	docker-compose up -d db
+	@sleep 5
+	@echo "✅ Database ready!"
+
+db-load:
+	@echo "📥 Loading data into database..."
+	python db/load_data.py
+	@echo "✅ Data loaded!"
 
 # ============================================================
 # Testing
@@ -172,25 +135,10 @@ rebuild:
 
 test:
 	@echo "🧪 Running tests..."
+	pytest tests/ -v
+
+test-cov:
 	pytest tests/ -v --cov=mlops --cov-report=term-missing
-	@echo "✅ Tests complete!"
-
-test-fast:
-	@echo "🧪 Running fast tests only..."
-	pytest tests/ -v -m "not slow"
-
-lint:
-	@echo "🔍 Checking code style..."
-	flake8 mlops/ app/ --count --select=E9,F63,F7,F82 --show-source --statistics
-	@echo "✅ Lint complete!"
-
-# ============================================================
-# Jupyter
-# ============================================================
-
-notebook:
-	@echo "📓 Starting Jupyter..."
-	jupyter notebook notebooks/
 
 # ============================================================
 # Cleanup
@@ -202,26 +150,28 @@ clean:
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
 	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".ipynb_checkpoints" -exec rm -rf {} + 2>/dev/null || true
-	@echo "✅ Cache cleaned!"
+	@echo "✅ Cleaned!"
 
-clean-all: clean
-	@echo "🧹 Cleaning everything..."
+clean-mlflow:
+	@echo "🧹 Cleaning MLflow runs..."
 	rm -rf mlruns/ 2>/dev/null || true
-	rm -rf models/*.pkl 2>/dev/null || true
-	docker-compose down -v 2>/dev/null || true
-	@echo "✅ All cleaned!"
+	@echo "✅ MLflow data cleaned!"
+
+clean-models:
+	@echo "🧹 Cleaning saved models..."
+	rm -rf models/experiments/*.pkl 2>/dev/null || true
+	@echo "✅ Experiment models cleaned!"
 
 # ============================================================
-# Quick Workflow
+# Quick Workflows
 # ============================================================
 
-# Full setup from scratch
-full-setup: setup db-up db-load
-	@echo "✅ Full setup complete! Now run notebooks to train model."
+# Full dev setup
+dev-setup: setup db-up up-dev
+	@echo "✅ Development environment ready!"
 
 # Quick demo
-demo: db-up
-	@echo "🎮 Running demo..."
-	python mlops/train.py --name demo_run --model xgboost
-	python mlops/compare.py
+demo:
+	@echo "🎮 Running demo experiment..."
+	python -c "from mlops import ExperimentTracker; print('MLOps module OK!')"
 	@echo "✅ Demo complete!"
