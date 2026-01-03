@@ -1,0 +1,37 @@
+# =============================================================================
+# Docker Compose Override - CPU Only Version
+# =============================================================================
+#
+# Use this file to run on systems WITHOUT NVIDIA GPU
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
+#
+# Or set as default:
+#   export COMPOSE_FILE=docker-compose.yml:docker-compose.cpu.yml
+#   docker-compose up -d
+#
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # FastAPI Backend (CPU)
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ./app
+      dockerfile: Dockerfile.cpu
+    environment:
+      - DEVICE=cpu
+    # Remove GPU reservation
+    deploy: {}
+
+  # ---------------------------------------------------------------------------
+  # JupyterLab (CPU)
+  # ---------------------------------------------------------------------------
+  jupyter:
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter.cpu
+    # Remove GPU reservation
+    deploy: {}

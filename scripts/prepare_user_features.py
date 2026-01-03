@@ -18,7 +18,7 @@ def main():
     output_path = BASE_DIR / "app/user_features.csv"
 
     # Also copy to models_v2 for Docker
-    output_path_docker = Path("app/models_v2/user_features.csv")
+    output_path_docker = Path("../models_v2/user_features.csv")
     
     print("=" * 60)
     print("Preparing user_features.csv for API")

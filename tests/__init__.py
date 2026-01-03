@@ -1,3 +1,3 @@
 """
-Test suite for Digikala Churn Prediction System
+Tests package for Churn Prediction API.
 """

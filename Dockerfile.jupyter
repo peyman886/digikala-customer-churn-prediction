@@ -1,0 +1,76 @@
+# =============================================================================
+# Churn Prediction - JupyterLab Development Environment (GPU)
+# =============================================================================
+# Full development environment with GPU support for experiments
+#
+# Build:   docker build -t churn-jupyter:gpu -f Dockerfile.jupyter .
+# Run:     docker run --gpus all -p 8888:8888 -v $(pwd):/home/jovyan/work churn-jupyter:gpu
+# =============================================================================
+
+FROM nvidia/cuda:12.8.0-runtime-ubuntu22.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install Python 3.11 and system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3.11 \
+    python3.11-venv \
+    python3.11-dev \
+    python3-pip \
+    git \
+    curl \
+    build-essential \
+    libpq-dev \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.11 /usr/bin/python \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user (standard for Jupyter)
+RUN useradd -m -s /bin/bash -u 1000 jovyan
+USER jovyan
+WORKDIR /home/jovyan
+
+# Add local bin to PATH
+ENV PATH="/home/jovyan/.local/bin:${PATH}"
+
+# Upgrade pip
+RUN python -m pip install --user --upgrade pip
+
+# Install PyTorch with CUDA support
+RUN pip install --user --no-cache-dir \
+    torch==2.9.0+cu128 \
+    torchvision==0.24.0+cu128 \
+    torchaudio==2.9.0+cu128 \
+    --index-url https://download.pytorch.org/whl/cu128
+
+# Copy and install requirements
+COPY --chown=jovyan:jovyan requirements.txt /tmp/requirements.txt
+RUN pip install --user --no-cache-dir -r /tmp/requirements.txt
+
+# Install JupyterLab extensions
+RUN pip install --user --no-cache-dir \
+    jupyterlab-git \
+    jupyterlab-lsp \
+    python-lsp-server[all]
+
+# Create work directory
+RUN mkdir -p /home/jovyan/work
+
+WORKDIR /home/jovyan/work
+
+# Environment variables
+ENV JUPYTER_PORT=8888
+ENV JUPYTER_TOKEN=churn123
+ENV PYTHONUNBUFFERED=1
+
+# Expose Jupyter port
+EXPOSE 8888
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8888/api || exit 1
+
+# Start JupyterLab
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=churn123"]

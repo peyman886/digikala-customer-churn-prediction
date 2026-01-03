@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 import numpy as np
 import pandas as pd
 
-from .models.predictor import ChurnPredictor
+from models.predictor import ChurnPredictor
 
 logger = logging.getLogger(__name__)
 

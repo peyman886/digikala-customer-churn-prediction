@@ -13,8 +13,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from .config import settings
-from .schemas import (
+from config import settings
+from schemas import (
     PredictRequest,
     PredictResponse,
     UserProfile,
@@ -24,8 +24,8 @@ from .schemas import (
     FeatureImportance,
     HealthResponse,
 )
-from .models import ChurnPredictor
-from .services import UserDataService, StatsService
+from models import ChurnPredictor
+from services import UserDataService, StatsService
 
 # =============================================================================
 # Logging
@@ -254,5 +254,5 @@ async def export_high_risk(
 # =============================================================================
 if __name__ == "__main__":
     import uvicorn
-    # uvicorn.run("main:app", host="0.0.0.0", port=settings.api_port, reload=True)
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=settings.api_port, reload=True)
+    # uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

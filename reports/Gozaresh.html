@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>گزارش پروژه پیش‌بینی ریزش مشتری</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Vazirmatn', 'Segoe UI', Tahoma, sans-serif;
+            line-height: 1.8;
+            color: var(--dark);
+            background: var(--light);
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        
+        header {
+            background: linear-gradient(135deg, var(--primary), #1d4ed8);
+            color: white;
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        header p { opacity: 0.9; font-size: 1.1rem; }
+        
+        section {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: var(--primary);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 3px solid var(--primary);
+        }
+        
+        h3 { color: var(--dark); font-size: 1.2rem; margin: 1.5rem 0 1rem; }
+        h4 { color: var(--secondary); font-size: 1rem; margin: 1rem 0 0.5rem; }
+        p { margin-bottom: 1rem; text-align: justify; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+        
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: right;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        th { background: var(--light); font-weight: 600; color: var(--dark); }
+        tr:hover { background: #f1f5f9; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, var(--light), white);
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+        
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .stat-card .label { font-size: 0.9rem; color: var(--secondary); margin-top: 0.25rem; }
+        
+        .highlight {
+            background: #eff6ff;
+            border-right: 4px solid var(--primary);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .highlight.success { background: #ecfdf5; border-right-color: var(--success); }
+        .highlight.warning { background: #fffbeb; border-right-color: var(--warning); }
+        .highlight.danger { background: #fef2f2; border-right-color: var(--danger); }
+        
+        .plot-container {
+            background: #fafafa;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.5rem 0;
+            text-align: center;
+        }
+        
+        .plot-container img { max-width: 100%; height: auto; border-radius: 4px; }
+        .plot-container .caption { font-size: 0.85rem; color: var(--secondary); margin-top: 0.5rem; }
+        
+        ul, ol { margin: 1rem 0 1rem 1.5rem; }
+        li { margin-bottom: 0.5rem; }
+        
+        code {
+            background: #f1f5f9;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            direction: ltr;
+            display: inline-block;
+        }
+        
+        .formula {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-family: 'Times New Roman', serif;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            direction: ltr;
+        }
+        
+        .toc {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .toc h3 { margin-top: 0; }
+        .toc ol { margin-bottom: 0; }
+        .toc a { color: var(--primary); text-decoration: none; }
+        .toc a:hover { text-decoration: underline; }
+        
+        .feature-category {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+        
+        .feature-category h4 {
+            color: var(--primary);
+            margin-top: 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        
+        .feature-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 4px;
+            border-right: 3px solid var(--primary);
+        }
+        
+        .feature-item .name {
+            font-weight: 600;
+            color: var(--dark);
+            font-family: monospace;
+            direction: ltr;
+            display: inline-block;
+        }
+        
+        .feature-item .desc { font-size: 0.9rem; color: var(--secondary); }
+        
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+        
+        footer a { color: var(--primary); }
+        
+        @media (max-width: 768px) {
+            .container { padding: 1rem; }
+            header h1 { font-size: 1.75rem; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .feature-list { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🔮 پروژه پیش‌بینی ریزش مشتری</h1>
+        <p>تحلیل رفتار مشتریان و پیش‌بینی احتمال ریزش با استفاده از یادگیری ماشین</p>
+    </header>
+    
+    <div class="container">
+        <nav class="toc">
+            <h3>📋 فهرست مطالب</h3>
+            <ol>
+                <li><a href="#problem">تعریف مسئله و هدف</a></li>
+                <li><a href="#dataset">معرفی دیتاست</a></li>
+                <li><a href="#eda">تحلیل اکتشافی داده‌ها</a></li>
+                <li><a href="#business">تحلیل‌های بیزینسی و مالی</a></li>
+                <li><a href="#segmentation">سگمنت‌بندی مشتریان</a></li>
+                <li><a href="#churn-definition">تعریف Churn</a></li>
+                <li><a href="#preprocessing">پیش‌پردازش داده‌ها</a></li>
+                <li><a href="#features">مهندسی ویژگی‌ها</a></li>
+                <li><a href="#modeling">مدل‌سازی</a></li>
+                <li><a href="#results">نتایج و ارزیابی</a></li>
+                <li><a href="#future">پیشنهادات آینده</a></li>
+            </ol>
+        </nav>
+        
+        <!-- Section 1 -->
+        <section id="problem">
+            <h2>🎯 تعریف مسئله و هدف</h2>
+            <p>در کسب‌وکارهای Q-Commerce (تجارت سریع)، حفظ مشتریان فعلی به مراتب ارزان‌تر از جذب مشتریان جدید است. هدف این پروژه، <strong>پیش‌بینی احتمال ریزش مشتریان</strong> است.</p>
+            <div class="highlight">
+                <strong>چالش اصلی:</strong> در E-commerce برخلاف سرویس‌های اشتراکی، هیچ سیگنال صریحی برای لغو اشتراک وجود ندارد.
+            </div>
+            <h3>اهداف پروژه</h3>
+            <ul>
+                <li>شناسایی الگوهای رفتاری مشتریان در آستانه ریزش</li>
+                <li>ساخت مدل پیش‌بینی با تمرکز بر <strong>Recall بالا</strong></li>
+                <li>ارائه بینش‌های کاربردی برای بهبود تجربه مشتری</li>
+            </ul>
+        </section>
+        
+        <!-- Section 2 -->
+        <section id="dataset">
+            <h2>📊 معرفی دیتاست</h2>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="value">2.7M</div><div class="label">تعداد سفارشات</div></div>
+                <div class="stat-card"><div class="value">376K</div><div class="label">تعداد کاربران</div></div>
+                <div class="stat-card"><div class="value">180</div><div class="label">روز (بازه زمانی)</div></div>
+                <div class="stat-card"><div class="value">15K</div><div class="label">سفارش/روز</div></div>
+            </div>
+            <p>داده‌ها مربوط به <strong>نیمه اول سال ۱۴۰۴ شمسی</strong> (اسفند ۱۴۰۳ تا شهریور ۱۴۰۴) هستند.</p>
+            
+            <h3>ساختار پایگاه داده</h3>
+            <div class="plot-container">
+                <img src="er_diagram.svg" alt="ER Diagram">
+                <div class="caption">نمودار ER - رابطه بین جداول</div>
+            </div>
+            
+            <h4>جدول Orders</h4>
+            <table>
+                <tr><th>ستون</th><th>توضیحات</th><th>نوع</th></tr>
+                <tr><td>order_id</td><td>شناسه یکتای سفارش</td><td>PK</td></tr>
+                <tr><td>user_id</td><td>شناسه مشتری</td><td>FK</td></tr>
+                <tr><td>order_date</td><td>تاریخ سفارش</td><td>datetime</td></tr>
+                <tr><td>is_otd</td><td>تحویل به‌موقع</td><td>1/0/-1</td></tr>
+                <tr><td>delivery_status</td><td>وضعیت تحویل</td><td>varchar</td></tr>
+            </table>
+            
+            <h4>جدول CRM</h4>
+            <table>
+                <tr><th>ستون</th><th>توضیحات</th></tr>
+                <tr><td>rate_to_shop</td><td>امتیاز فروشگاه (1-5)</td></tr>
+                <tr><td>rate_to_courier</td><td>امتیاز پیک (1-5)</td></tr>
+                <tr><td>crm_delivery_request_count</td><td>تعداد شکایات</td></tr>
+            </table>
+            
+            <div class="highlight warning">
+                <strong>نکته:</strong> این دیتاست فاقد اطلاعات مالی است، بنابراین از RF به جای RFM استفاده شد.
+            </div>
+        </section>
+        
+        <!-- Section 3 -->
+        <section id="eda">
+            <h2>🔍 تحلیل اکتشافی داده‌ها (EDA)</h2>
+            
+            <h3>توزیع تعداد سفارش کاربران</h3>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="value">44.9%</div><div class="label">یک‌بار خریداران</div></div>
+                <div class="stat-card"><div class="value">7.23</div><div class="label">میانگین سفارش/کاربر</div></div>
+                <div class="stat-card"><div class="value">2</div><div class="label">میانه سفارش/کاربر</div></div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="01_order_distribution.png" alt="Order Distribution">
+                <div class="caption">هیستوگرام توزیع تعداد سفارش</div>
+            </div>
+            
+            <div class="highlight danger">
+                <strong>یافته کلیدی:</strong> تقریباً نیمی از کاربران فقط یک بار خرید کرده‌اند!
+            </div>
+            
+            <h3>عملکرد تحویل</h3>
+            <table>
+                <tr><th>وضعیت</th><th>درصد</th></tr>
+                <tr><td>✅ تحویل موفق</td><td>95.5%</td></tr>
+                <tr><td>⏰ به‌موقع</td><td>74.2%</td></tr>
+                <tr><td>⚠️ با تأخیر</td><td>19.7%</td></tr>
+                <tr><td>❌ لغو شده</td><td>2.8%</td></tr>
+            </table>
+            
+            <h3>روند سفارشات در زمان</h3>
+            <div class="plot-container">
+                <img src="02_daily_orders_timeseries.png" alt="Daily Orders">
+                <div class="caption">سری زمانی سفارشات روزانه</div>
+            </div>
+            
+            <div class="highlight warning">
+                <strong>نکته:</strong> در اواخر خرداد و اوایل تیر یک افت شدید مشاهده می‌شود.
+            </div>
+            
+            <h3>تحلیل Cohort</h3>
+            <div class="plot-container">
+                <img src="03_cohort_heatmap.png" alt="Cohort">
+                <div class="caption">Heatmap تحلیل Cohort</div>
+            </div>
+        </section>
+        
+        <!-- Section 4 -->
+        <section id="business">
+            <h2>💰 تحلیل‌های بیزینسی و مالی</h2>
+            
+            <h3>نرخ تبدیل</h3>
+            <div class="stats-grid">
+                <div class="stat-card"><div class="value">55.1%</div><div class="label">تبدیل خرید اول به دوم</div></div>
+                <div class="stat-card"><div class="value">7 روز</div><div class="label">میانه زمان تا خرید دوم</div></div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="04_conversion_funnel.png" alt="Conversion Funnel">
+                <div class="caption">Conversion Funnel</div>
+            </div>
+            
+            <h3>رضایت مشتری</h3>
+            <table>
+                <tr><th>معیار</th><th>مقدار</th><th>پوشش</th></tr>
+                <tr><td>⭐ امتیاز فروشگاه</td><td>4.42/5</td><td>41.4%</td></tr>
+                <tr><td>🚴 امتیاز پیک</td><td>4.68/5</td><td>26.3%</td></tr>
+            </table>
+            
+            <div class="highlight">
+                <strong>تأثیر تأخیر:</strong> نرخ تیکت سفارشات با تأخیر <strong>43%</strong> vs 11.5% برای به‌موقع
+            </div>
+            
+            <h3>CLV جایگزین</h3>
+            <div class="formula">CLV Score = Total Orders × (1 + log(Lifetime Days + 1))</div>
+            
+            <div class="plot-container">
+                <img src="05_clv_distribution.png" alt="CLV">
+                <div class="caption">توزیع CLV Score</div>
+            </div>
+            
+            <div class="highlight success">
+                <strong>قانون 80-20:</strong> 40% مشتریان VIP مسئول 88.9% سفارشات هستند!
+            </div>
+            
+            <h3>تحلیل Survival</h3>
+            <div class="plot-container">
+                <img src="06_survival_curve.png" alt="Survival">
+                <div class="caption">منحنی Kaplan-Meier</div>
+            </div>
+        </section>
+        
+        <!-- Section 5 -->
+        <section id="segmentation">
+            <h2>👥 سگمنت‌بندی مشتریان</h2>
+            
+            <table>
+                <tr><th>سگمنت</th><th>تعداد سفارش</th><th>کاربران</th><th>درصد</th></tr>
+                <tr><td>🆕 یک‌بار</td><td>1</td><td>168,769</td><td>44.9%</td></tr>
+                <tr><td>📦 جدید</td><td>2-4</td><td>83,619</td><td>22.2%</td></tr>
+                <tr><td>🔄 منظم</td><td>5-10</td><td>55,972</td><td>14.9%</td></tr>
+                <tr><td>⭐ وفادار</td><td>11-30</td><td>48,491</td><td>12.9%</td></tr>
+                <tr><td>👑 VIP</td><td>30+</td><td>19,147</td><td>5.1%</td></tr>
+            </table>
+            
+            <div class="plot-container">
+                <img src="07_segment_distribution.png" alt="Segments">
+                <div class="caption">توزیع سگمنت‌ها</div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="08_pareto_chart.png" alt="Pareto">
+                <div class="caption">نمودار Pareto - قانون 80-20</div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="09_rf_by_segment.png" alt="RF by Segment">
+                <div class="caption">توزیع RF به تفکیک سگمنت</div>
+            </div>
+        </section>
+        
+        <!-- Section 6 -->
+        <section id="churn-definition">
+            <h2>🎯 تعریف Churn</h2>
+            
+            <p>رویکرد: <strong>Threshold مختص هر سگمنت</strong></p>
+            <ol>
+                <li>محاسبه میانگین فاصله خرید برای هر کاربر</li>
+                <li>محاسبه میانه در هر سگمنت</li>
+                <li>Churn: اگر <code>Recency > 2 × Median Interval</code></li>
+            </ol>
+            
+            <table>
+                <tr><th>سگمنت</th><th>آستانه (روز)</th><th>نرخ Churn</th></tr>
+                <tr><td>🆕 1 سفارش</td><td>45</td><td>74.4%</td></tr>
+                <tr><td>📦 2-4</td><td>39</td><td>54.4%</td></tr>
+                <tr><td>🔄 5-10</td><td>35</td><td>31.6%</td></tr>
+                <tr><td>⭐ 11-30</td><td>17</td><td>30.2%</td></tr>
+                <tr><td>👑 30+</td><td>14</td><td>12.5%</td></tr>
+            </table>
+            
+            <div class="plot-container">
+                <img src="10_churn_rate_trend.png" alt="Churn Trend">
+                <div class="caption">روند Churn Rate در زمان</div>
+            </div>
+        </section>
+        
+        <!-- Section 7 -->
+        <section id="preprocessing">
+            <h2>🔧 پیش‌پردازش داده‌ها</h2>
+            
+            <h3>مدیریت مقادیر گمشده</h3>
+            <table>
+                <tr><th>ستون</th><th>گمشده</th><th>روش</th></tr>
+                <tr><td>rate_to_shop</td><td>58.6%</td><td>Zero + Indicator</td></tr>
+                <tr><td>rate_to_courier</td><td>73.7%</td><td>Zero + Indicator</td></tr>
+                <tr><td>is_otd = -1</td><td>6.1%</td><td>سه flag جداگانه</td></tr>
+            </table>
+            
+            <h3>Rolling Window Split</h3>
+            <div class="highlight success">
+                <strong>جلوگیری از Data Leakage:</strong> Features فقط از قبل Cutoff، Label از بعد Cutoff
+            </div>
+            <div class="formula">|═══ Observation Window ═══|═══ Prediction Window ═══|</div>
+        </section>
+        
+        <!-- Section 8: Feature Engineering -->
+        <section id="features">
+            <h2>⚙️ مهندسی ویژگی‌ها</h2>
+            <p>در مجموع <strong>98 ویژگی</strong> در 7 دسته ساخته شد:</p>
+            
+            <div class="feature-category">
+                <h4>1️⃣ ویژگی‌های RF - Recency-Frequency (9 ویژگی)</h4>
+                <p>الگوی زمانی و تکرار خرید مشتری</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">total_orders</span><div class="desc">تعداد کل سفارشات</div></div>
+                    <div class="feature-item"><span class="name">recency</span><div class="desc">روز از آخرین سفارش</div></div>
+                    <div class="feature-item"><span class="name">tenure_days</span><div class="desc">عمر مشتری (اول تا آخر)</div></div>
+                    <div class="feature-item"><span class="name">min_order_interval</span><div class="desc">کمترین فاصله بین سفارشات</div></div>
+                    <div class="feature-item"><span class="name">max_order_interval</span><div class="desc">بیشترین فاصله بین سفارشات</div></div>
+                    <div class="feature-item"><span class="name">median_order_interval</span><div class="desc">میانه فاصله سفارشات</div></div>
+                    <div class="feature-item"><span class="name">cv_order_interval</span><div class="desc">ضریب تغییرات (std/mean)</div></div>
+                    <div class="feature-item"><span class="name">orders_per_month</span><div class="desc">میانگین سفارش در ماه</div></div>
+                    <div class="feature-item"><span class="name">recency_tenure_ratio</span><div class="desc">نسبت recency به tenure - <strong>مهم‌ترین!</strong></div></div>
+                </div>
+            </div>
+            
+            <div class="feature-category">
+                <h4>2️⃣ ویژگی‌های کیفیت تحویل (27 ویژگی)</h4>
+                <p>کیفیت تجربه تحویل و روند آن</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">otd_orders</span><div class="desc">تعداد سفارشات به‌موقع</div></div>
+                    <div class="feature-item"><span class="name">late_orders</span><div class="desc">تعداد سفارشات با تأخیر</div></div>
+                    <div class="feature-item"><span class="name">unknown_otd_orders</span><div class="desc">وضعیت نامشخص</div></div>
+                    <div class="feature-item"><span class="name">delivered_orders</span><div class="desc">سفارشات تحویل‌شده</div></div>
+                    <div class="feature-item"><span class="name">cancelled_orders</span><div class="desc">سفارشات لغوشده</div></div>
+                    <div class="feature-item"><span class="name">otd_rate</span><div class="desc">نرخ تحویل به‌موقع کل</div></div>
+                    <div class="feature-item"><span class="name">late_rate</span><div class="desc">نرخ تأخیر کل</div></div>
+                    <div class="feature-item"><span class="name">delivery_success_rate</span><div class="desc">نرخ موفقیت تحویل</div></div>
+                    <div class="feature-item"><span class="name">otd_rate_last_3</span><div class="desc">OTD در ۳ سفارش اخیر</div></div>
+                    <div class="feature-item"><span class="name">otd_rate_last_5</span><div class="desc">OTD در ۵ سفارش اخیر</div></div>
+                    <div class="feature-item"><span class="name">otd_rate_last_10</span><div class="desc">OTD در ۱۰ سفارش اخیر</div></div>
+                    <div class="feature-item"><span class="name">consecutive_late_current</span><div class="desc">تأخیر متوالی فعلی</div></div>
+                    <div class="feature-item"><span class="name">max_consecutive_late</span><div class="desc">حداکثر تأخیر متوالی</div></div>
+                    <div class="feature-item"><span class="name">last_order_was_late</span><div class="desc">آیا آخرین سفارش تأخیر داشت؟</div></div>
+                    <div class="feature-item"><span class="name">otd_trend</span><div class="desc">روند OTD (بهبود/بدتر)</div></div>
+                    <div class="feature-item"><span class="name">first_order_is_otd_ontime</span><div class="desc">سفارش اول به‌موقع بود؟</div></div>
+                    <div class="feature-item"><span class="name">first_order_is_otd_late</span><div class="desc">سفارش اول تأخیر داشت؟</div></div>
+                    <div class="feature-item"><span class="name">first_order_is_delivered</span><div class="desc">سفارش اول تحویل شد؟</div></div>
+                    <div class="feature-item"><span class="name">first_order_is_cancelled</span><div class="desc">سفارش اول لغو شد؟</div></div>
+                    <div class="feature-item"><span class="name">last_order_is_otd_*</span><div class="desc">وضعیت OTD آخرین سفارش</div></div>
+                    <div class="feature-item"><span class="name">cancellation_rate</span><div class="desc">نرخ لغو سفارشات</div></div>
+                </div>
+            </div>
+            
+            <div class="feature-category">
+                <h4>3️⃣ ویژگی‌های CRM/پشتیبانی (13 ویژگی)</h4>
+                <p>تعامل کاربر با پشتیبانی</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">total_crm_requests</span><div class="desc">مجموع درخواست‌های پشتیبانی</div></div>
+                    <div class="feature-item"><span class="name">total_fake_requests</span><div class="desc">درخواست‌های نامعتبر</div></div>
+                    <div class="feature-item"><span class="name">max_crm_per_order</span><div class="desc">حداکثر شکایت در یک سفارش</div></div>
+                    <div class="feature-item"><span class="name">orders_with_crm</span><div class="desc">سفارشات با شکایت</div></div>
+                    <div class="feature-item"><span class="name">crm_request_rate</span><div class="desc">نرخ شکایت/سفارش</div></div>
+                    <div class="feature-item"><span class="name">fake_request_rate</span><div class="desc">نرخ شکایت فیک</div></div>
+                    <div class="feature-item"><span class="name">orders_with_crm_rate</span><div class="desc">درصد سفارشات با شکایت</div></div>
+                    <div class="feature-item"><span class="name">net_crm_requests</span><div class="desc">شکایات واقعی (کل - فیک)</div></div>
+                    <div class="feature-item"><span class="name">fake_to_real_ratio</span><div class="desc">نسبت فیک به واقعی</div></div>
+                    <div class="feature-item"><span class="name">high_crm_user</span><div class="desc">کاربر پرشکایت (Flag)</div></div>
+                </div>
+            </div>
+            
+            <div class="feature-category">
+                <h4>4️⃣ ویژگی‌های امتیازدهی (23 ویژگی)</h4>
+                <p>رضایت کاربر از فروشگاه و پیک</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">avg_rate_shop</span><div class="desc">میانگین امتیاز فروشگاه</div></div>
+                    <div class="feature-item"><span class="name">min_rate_shop</span><div class="desc">کمترین امتیاز فروشگاه</div></div>
+                    <div class="feature-item"><span class="name">max_rate_shop</span><div class="desc">بیشترین امتیاز فروشگاه</div></div>
+                    <div class="feature-item"><span class="name">std_rate_shop</span><div class="desc">انحراف معیار امتیاز</div></div>
+                    <div class="feature-item"><span class="name">shop_rating_count</span><div class="desc">تعداد امتیازدهی فروشگاه</div></div>
+                    <div class="feature-item"><span class="name">avg_rate_courier</span><div class="desc">میانگین امتیاز پیک</div></div>
+                    <div class="feature-item"><span class="name">courier_rating_count</span><div class="desc">تعداد امتیازدهی پیک</div></div>
+                    <div class="feature-item"><span class="name">shop_rating_completion</span><div class="desc">درصد امتیازدهی فروشگاه</div></div>
+                    <div class="feature-item"><span class="name">courier_rating_completion</span><div class="desc">درصد امتیازدهی پیک</div></div>
+                    <div class="feature-item"><span class="name">rating_engagement</span><div class="desc">میزان مشارکت امتیازدهی</div></div>
+                    <div class="feature-item"><span class="name">low_shop_rating_count</span><div class="desc">امتیاز پایین فروشگاه (&lt;3)</div></div>
+                    <div class="feature-item"><span class="name">low_shop_rating_ratio</span><div class="desc">نسبت امتیاز پایین</div></div>
+                    <div class="feature-item"><span class="name">has_low_shop_rating</span><div class="desc">امتیاز پایین داده؟ (Flag)</div></div>
+                    <div class="feature-item"><span class="name">has_low_courier_rating</span><div class="desc">امتیاز پایین پیک؟</div></div>
+                    <div class="feature-item"><span class="name">has_any_low_rating</span><div class="desc">هر نوع امتیاز پایین؟</div></div>
+                </div>
+            </div>
+            
+            <div class="feature-category">
+                <h4>5️⃣ ویژگی‌های کامنت - NLP ساده (15 ویژگی)</h4>
+                <p>فقط 3.2% سفارشات کامنت داشتند</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">total_comments</span><div class="desc">تعداد کل کامنت‌ها</div></div>
+                    <div class="feature-item"><span class="name">total_comment_length</span><div class="desc">مجموع طول کامنت‌ها</div></div>
+                    <div class="feature-item"><span class="name">has_any_emoji</span><div class="desc">استفاده از ایموجی؟</div></div>
+                    <div class="feature-item"><span class="name">mentions_thanks_count</span><div class="desc">تعداد تشکر</div></div>
+                    <div class="feature-item"><span class="name">mentions_problem_count</span><div class="desc">ذکر مشکل</div></div>
+                    <div class="feature-item"><span class="name">mentions_late_count</span><div class="desc">ذکر تأخیر</div></div>
+                    <div class="feature-item"><span class="name">mentions_wrong_item_count</span><div class="desc">ذکر اشتباه</div></div>
+                    <div class="feature-item"><span class="name">mentions_quality_issue_count</span><div class="desc">مشکل کیفیت</div></div>
+                    <div class="feature-item"><span class="name">mentions_packaging_count</span><div class="desc">بسته‌بندی</div></div>
+                    <div class="feature-item"><span class="name">mentions_last_time_count</span><div class="desc">"دفعه آخر"</div></div>
+                    <div class="feature-item"><span class="name">comment_rate</span><div class="desc">نرخ کامنت‌گذاری</div></div>
+                    <div class="feature-item"><span class="name">is_vocal_customer</span><div class="desc">کاربر پرحرف؟ (>20%)</div></div>
+                </div>
+            </div>
+            
+            <div class="feature-category">
+                <h4>6️⃣ ویژگی‌های سفارش اول/آخر (7 ویژگی)</h4>
+                <p>تجربه اول و آخر بسیار مهم است</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">first_order_had_issue</span><div class="desc">سفارش اول مشکل داشت؟</div></div>
+                    <div class="feature-item"><span class="name">last_order_had_issue</span><div class="desc">آخرین سفارش مشکل داشت؟</div></div>
+                    <div class="feature-item"><span class="name">first_order_has_comment</span><div class="desc">سفارش اول کامنت داشت؟</div></div>
+                    <div class="feature-item"><span class="name">last_order_has_comment</span><div class="desc">آخرین سفارش کامنت داشت؟</div></div>
+                </div>
+            </div>
+            
+            <div class="feature-category">
+                <h4>7️⃣ ویژگی‌های ترکیبی (4 ویژگی)</h4>
+                <p>الگوهای پیچیده‌تر</p>
+                <div class="feature-list">
+                    <div class="feature-item"><span class="name">high_freq_low_quality</span><div class="desc">سفارش زیاد + OTD پایین</div></div>
+                    <div class="feature-item"><span class="name">engaged_but_unhappy</span><div class="desc">امتیازدهی فعال + امتیاز پایین</div></div>
+                    <div class="feature-item"><span class="name">many_tickets_low_rating</span><div class="desc">شکایت زیاد + امتیاز پایین</div></div>
+                    <div class="feature-item"><span class="name">first_bad_still_active</span><div class="desc">تجربه بد اول + هنوز فعال</div></div>
+                </div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="11_feature_importance.png" alt="Feature Importance">
+                <div class="caption">Feature Importance - مهم‌ترین ویژگی‌ها</div>
+            </div>
+        </section>
+        
+        <!-- Section 9 -->
+        <section id="modeling">
+            <h2>🤖 مدل‌سازی</h2>
+            
+            <h3>استراتژی دوگانه</h3>
+            <div class="highlight">👤 <strong>1 سفارش:</strong> XGBoost (الگوی کافی ندارند)</div>
+            <div class="highlight success">👥 <strong>2+ سفارش:</strong> FT-Transformer (الگوهای غنی)</div>
+            
+            <h3>مقایسه رویکردها</h3>
+            <table>
+                <tr><th>رویکرد</th><th>Weighted Recall</th></tr>
+                <tr><td>مدل یکپارچه</td><td>0.29</td></tr>
+                <tr><td>Per-Segment</td><td>0.48</td></tr>
+                <tr><td>Clustering</td><td>0.74</td></tr>
+            </table>
+            
+            <h3>وزن‌دهی سگمنت‌ها</h3>
+            <table>
+                <tr><th>سگمنت</th><th>وزن</th></tr>
+                <tr><td>2-4 سفارش</td><td>0.5</td></tr>
+                <tr><td>5-10 سفارش</td><td>1.5</td></tr>
+                <tr><td>11-30 سفارش</td><td>3.0</td></tr>
+                <tr><td>30+ سفارش</td><td>5.0</td></tr>
+            </table>
+            
+            <div class="highlight success"><strong>بهبود با Tuning:</strong> 0.478 → 0.558 (+8%)</div>
+        </section>
+        
+        <!-- Section 10 -->
+        <section id="results">
+            <h2>📈 نتایج و ارزیابی</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card"><div class="value">0.82</div><div class="label">Overall Recall</div></div>
+                <div class="stat-card"><div class="value">0.73</div><div class="label">F1 Score</div></div>
+                <div class="stat-card"><div class="value">0.65</div><div class="label">Weighted Recall</div></div>
+                <div class="stat-card"><div class="value">0.63</div><div class="label">ROC-AUC</div></div>
+            </div>
+            
+            <h3>عملکرد به تفکیک سگمنت</h3>
+            <table>
+                <tr><th>سگمنت</th><th>مدل</th><th>Recall</th></tr>
+                <tr><td>👤 1 سفارش</td><td>XGBoost</td><td>0.75</td></tr>
+                <tr><td>📦 2-4</td><td>FT-Transformer</td><td>0.99</td></tr>
+                <tr><td>🔄 5-10</td><td>FT-Transformer</td><td>0.89</td></tr>
+                <tr><td>⭐ 11-30</td><td>FT-Transformer</td><td>0.69</td></tr>
+                <tr><td>👑 30+</td><td>FT-Transformer</td><td>0.52</td></tr>
+            </table>
+            
+            <div class="plot-container">
+                <img src="12_roc_curves.png" alt="ROC"><div class="caption">ROC Curves</div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="13_confusion_matrix.png" alt="CM"><div class="caption">Confusion Matrix</div>
+            </div>
+            
+            <div class="plot-container">
+                <img src="14_shap_summary.png" alt="SHAP"><div class="caption">SHAP Summary</div>
+            </div>
+            
+            <div class="highlight">
+                <strong>مهم‌ترین ویژگی:</strong> <code>recency_tenure_ratio</code>
+            </div>
+            
+            <div class="plot-container">
+                <img src="15_model_comparison.png" alt="Comparison"><div class="caption">مقایسه مدل‌ها</div>
+            </div>
+        </section>
+        
+        <!-- Section 11 -->
+        <section id="future">
+            <h2>🔮 پیشنهادات آینده</h2>
+            <ol>
+                <li><strong>Rolling Behavior:</strong> الگوی یک ماه اخیر > ۶ ماه گذشته</li>
+                <li><strong>Personalized Threshold:</strong> برای VIP از میانه خود کاربر</li>
+                <li><strong>Time-Aware Features:</strong> وزن‌دهی به رفتارهای اخیر</li>
+                <li><strong>علت عدم خرید دوم:</strong> چرا 45% فقط یک‌بار؟</li>
+                <li><strong>داده مالی:</strong> تبدیل RF به RFM</li>
+                <li><strong>A/B Testing:</strong> ارزیابی intervention</li>
+            </ol>
+            
+            <h3>نکات کلیدی</h3>
+            <ul>
+                <li>سگمنت‌بندی قبل از مدل‌سازی، دقت را افزایش می‌دهد</li>
+                <li>تعریف Churn باید مختص هر سگمنت باشد</li>
+                <li>تجربه اولین سفارش تأثیر زیادی دارد</li>
+            </ul>
+        </section>
+    </div>
+    
+    <footer>
+        <p>📊 پروژه پیش‌بینی ریزش مشتری | تهیه شده با ❤️</p>
+        <p><a href="https://github.com/peyman886/digikala-customer-churn-prediction">GitHub Repository</a></p>
+    </footer>
+</body>
+</html>

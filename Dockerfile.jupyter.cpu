@@ -1,0 +1,67 @@
+# =============================================================================
+# Churn Prediction - JupyterLab Development Environment (CPU)
+# =============================================================================
+# Full development environment for CPU-only systems
+#
+# Build:   docker build -t churn-jupyter:cpu -f Dockerfile.jupyter.cpu .
+# Run:     docker run -p 8888:8888 -v $(pwd):/home/jovyan/work churn-jupyter:cpu
+# =============================================================================
+
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    build-essential \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user (standard for Jupyter)
+RUN useradd -m -s /bin/bash -u 1000 jovyan
+USER jovyan
+WORKDIR /home/jovyan
+
+# Add local bin to PATH
+ENV PATH="/home/jovyan/.local/bin:${PATH}"
+
+# Upgrade pip
+RUN python -m pip install --user --upgrade pip
+
+# Install PyTorch CPU version
+RUN pip install --user --no-cache-dir \
+    torch==2.9.0+cpu \
+    torchvision==0.24.0+cpu \
+    torchaudio==2.9.0+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Copy and install requirements
+COPY --chown=jovyan:jovyan requirements-cpu.txt /tmp/requirements.txt
+RUN pip install --user --no-cache-dir -r /tmp/requirements.txt
+
+# Install JupyterLab extensions
+RUN pip install --user --no-cache-dir \
+    jupyterlab-git \
+    jupyterlab-lsp \
+    python-lsp-server[all]
+
+# Create work directory
+RUN mkdir -p /home/jovyan/work
+
+WORKDIR /home/jovyan/work
+
+# Environment variables
+ENV JUPYTER_PORT=8888
+ENV JUPYTER_TOKEN=churn123
+ENV PYTHONUNBUFFERED=1
+
+# Expose Jupyter port
+EXPOSE 8888
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8888/api || exit 1
+
+# Start JupyterLab
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--NotebookApp.token=churn123"]
