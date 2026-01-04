@@ -1035,7 +1035,7 @@ def main():
     print(f"   ✅ User stats for {len(user_stats):,} users")
     
     # Output directory
-    output_dir = Path('.')
+    output_dir = Path('./plots')
     print(f"\n📁 Output directory: {output_dir.absolute()}")
     
     # Generate plots

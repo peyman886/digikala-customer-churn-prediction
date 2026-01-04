@@ -38,6 +38,27 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\experiments\ml_experiments\shap_importance_1_Order.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\experiments\ml_experiments\shap_importance_2-4_Orders.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\experiments\ml_experiments\xgb_importance_1_Order.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\experiments\neural_networks_v2\model_comparison.csv">
           <value>
             <Attribute>
