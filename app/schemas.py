@@ -22,6 +22,18 @@ class PredictResponse(BaseModel):
     model_used: str
 
 
+class BatchPredictRequest(BaseModel):
+    user_ids: List[str] = Field(..., example=["1385028", "54227"], max_length=100)
+
+
+class BatchPredictResponse(BaseModel):
+    total: int
+    successful: int
+    failed: int
+    predictions: List[PredictResponse]
+    errors: List[dict]  # {"user_id": "123", "error": "not found"}
+
+
 class UserProfile(BaseModel):
     user_id: str
     total_orders: int
@@ -31,7 +43,7 @@ class UserProfile(BaseModel):
     avg_rate_shop: float
     avg_rate_courier: float
     total_crm_requests: int
-    orders_last_30d: int
+    # orders_last_30d: int
     total_comments: int
 
 

@@ -16,7 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from schemas import (
     PredictRequest,
+    BatchPredictRequest,
     PredictResponse,
+    BatchPredictResponse,
     UserProfile,
     OverviewStats,
     UsersAtRiskResponse,
@@ -190,6 +192,47 @@ async def predict(request: PredictRequest):
     )
 
 
+# Batch Prediction
+@app.post("/api/predict/batch", response_model=BatchPredictResponse, tags=["Prediction"])
+async def predict_batch(request: BatchPredictRequest):
+    """Predict churn for multiple users at once."""
+    ensure_ready()
+
+    predictions = []
+    errors = []
+
+    for user_id in request.user_ids:
+        try:
+            cached = user_service.get_prediction(user_id)
+            if cached is None:
+                errors.append({
+                    "user_id": user_id,
+                    "error": "not_found"
+                })
+                continue
+
+            predictions.append(PredictResponse(
+                user_id=user_id,
+                will_churn=cached['probability'] >= 0.5,
+                probability=round(float(cached['probability']), 4),
+                risk_level=cached['risk_level'],
+                model_used=cached['model_used'],
+            ))
+        except Exception as e:
+            errors.append({
+                "user_id": user_id,
+                "error": str(e)
+            })
+
+    return BatchPredictResponse(
+        total=len(request.user_ids),
+        successful=len(predictions),
+        failed=len(errors),
+        predictions=predictions,
+        errors=errors
+    )
+
+
 @app.get("/api/user/{user_id}/profile", response_model=UserProfile, tags=["User"])
 async def get_profile(user_id: str):
     ensure_ready()
@@ -207,7 +250,7 @@ async def get_profile(user_id: str):
         avg_rate_shop=round(float(user['avg_rate_shop']), 2),
         avg_rate_courier=round(float(user['avg_rate_courier']), 2),
         total_crm_requests=int(user['total_crm_requests']),
-        orders_last_30d=int(user['orders_last_30d']),
+        # orders_last_30d=int(user['orders_last_30d']),
         total_comments=int(user['total_comments']),
     )
 

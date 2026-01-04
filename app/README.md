@@ -106,15 +106,17 @@ Statistics and analytics.
 Returns API information and version.
 
 ```bash
-curl http://localhost:8000/
+curl http://localhost:9000/
 ```
 
 **Response:**
 ```json
+
 {
-  "name": "Churn Prediction API",
-  "version": "2.0.0",
-  "docs": "/docs"
+  "name":"Churn Prediction API",
+  "version":"2.0.0",
+  "strategy":{"1_order":"XGBoost",
+              "2+_orders":"FT-Transformer"}
 }
 ```
 
@@ -124,16 +126,19 @@ curl http://localhost:8000/
 Checks if models are loaded and service is ready.
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:9000/health
 ```
 
 **Response:**
 ```json
+
 {
-  "status": "healthy",
-  "models_loaded": true,
-  "device": "cuda:0",
-  "users_loaded": 338101
+  "status":"healthy",
+  "models_loaded":{"xgboost":true,
+                  "transformer":true},
+  "users_loaded":279455,
+  "predictions_cached":true,
+  "device":"cuda (NVIDIA GeForce RTX 2080 with Max-Q Design)"
 }
 ```
 
@@ -143,7 +148,7 @@ curl http://localhost:8000/health
 Predict churn for one user.
 
 ```bash
-curl -X POST http://localhost:8000/predict \
+curl -X POST http://localhost:9000/api/predict \
   -H "Content-Type: application/json" \
   -d '{"user_id": "1385028"}'
 ```
@@ -152,10 +157,10 @@ curl -X POST http://localhost:8000/predict \
 ```json
 {
   "user_id": "1385028",
-  "probability": 0.8234,
-  "will_churn": true,
-  "risk_level": "HIGH",
-  "model_used": "transformer"
+  "probability": 0.2931,
+  "will_churn": false,
+  "risk_level": "LOW",
+  "model_used": "ft_transformer"
 }
 ```
 
@@ -165,24 +170,33 @@ curl -X POST http://localhost:8000/predict \
 Predict for multiple users at once.
 
 ```bash
-curl -X POST http://localhost:8000/predict/batch \
+curl -X POST http://localhost:9000/api/predict/batch \
   -H "Content-Type: application/json" \
   -d '{"user_ids": ["1385028", "1234567", "9876543"]}'
+
 ```
 
 **Response:**
 ```json
 {
+  "total": 3,
+  "successful": 1,
+  "failed": 2,
   "predictions": [
     {
       "user_id": "1385028",
-      "probability": 0.8234,
-      "will_churn": true,
-      "risk_level": "HIGH",
-      "model_used": "transformer"
+      "will_churn": false,
+      "probability": 0.2931,
+      "risk_level": "LOW",
+      "model_used": "ft_transformer"
     }
+  ],
+  "errors": [
+    {"user_id": "1234567", "error": "not_found"},
+    {"user_id": "9876543", "error": "not_found"}
   ]
 }
+
 ```
 
 ---
@@ -191,27 +205,32 @@ curl -X POST http://localhost:8000/predict/batch \
 Get high-level stats.
 
 ```bash
-curl http://localhost:8000/stats/overview
+curl http://localhost:9000/api/stats/overview
+
 ```
 
 **Response:**
 ```json
 {
-  "total_users": 338101,
-  "low_risk": 102340,
-  "medium_risk": 118456,
-  "high_risk": 117305,
-  "avg_probability": 0.5423
+  "total_users":279455,
+  "low_risk":32091,
+  "medium_risk":162693,
+  "high_risk":84671,
+  "low_risk_pct":11.5,
+  "medium_risk_pct":58.2,
+  "high_risk_pct":30.3,
+  "avg_churn_probability":0.6265
 }
 ```
 
 ---
 
-### **GET /users/{user_id}** - User Details
+### **GET /api/user/{user_id}/profile** - User Details
 Get detailed user info with features.
 
 ```bash
-curl http://localhost:8000/users/1385028
+curl http://localhost:9000/api/user/1385028/profile
+
 ```
 
 **Response:**
@@ -248,7 +267,7 @@ FEATURE_COUNT=98
 
 # API settings
 HOST=0.0.0.0
-PORT=8000
+PORT=9000
 LOG_LEVEL=info
 ```
 
@@ -263,7 +282,7 @@ docker build -t churn-api app/
 
 ### Run Container
 ```bash
-docker run -p 8000:8000 \
+docker run -p 9000:9000 \
   -v $(pwd)/app:/app \
   -e DEVICE=cpu \
   churn-api
@@ -286,7 +305,7 @@ pip install -r requirements.txt
 
 ### Run with Auto-Reload
 ```bash
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 9000
 ```
 
 ### Run with Gunicorn (Production)
@@ -294,7 +313,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 gunicorn main:app \
   --workers 4 \
   --worker-class uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000
+  --bind 0.0.0.0:9000
 ```
 
 ---
@@ -384,8 +403,8 @@ export DEVICE=cpu
 ## 📚 API Documentation
 
 Interactive docs available at:
-- **Swagger UI:** http://localhost:8000/docs
-- **ReDoc:** http://localhost:8000/redoc
+- **Swagger UI:** http://localhost:000/docs
+- **ReDoc:** http://localhost:9000/redoc
 
 ---
 

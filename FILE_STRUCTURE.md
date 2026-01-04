@@ -1,212 +1,212 @@
-# 📁 راهنمای ساختار فایل‌ها (File Structure Guide)
+# 📁 File Structure Guide
 
-این سند توضیح می‌دهد که هر فایل کجا قرار می‌گیرد و چه کاری انجام می‌دهد.
+This document explains where each file is located and what it does.
 
----
+***
 
-## 🗂️ ساختار کلی پروژه
+## 🗂️ Overall Project Structure
 
 ```
 digikala-customer-churn-prediction/
 │
-├── 📄 requirements.txt          ← نصب پکیج‌ها (GPU)
-├── 📄 requirements-cpu.txt      ← نصب پکیج‌ها (CPU)
-├── 📄 docker-compose.yml        ← اجرای Docker (GPU)
-├── 📄 docker-compose.cpu.yml    ← تنظیمات اضافی برای CPU
-├── 📄 Dockerfile.jupyter        ← Jupyter با GPU
-├── 📄 Dockerfile.jupyter.cpu    ← Jupyter بدون GPU
-├── 📄 Makefile                  ← دستورات سریع
-├── 📄 pyproject.toml            ← تنظیمات Python
-├── 📄 .env.example              ← نمونه تنظیمات محیطی
-├── 📄 .gitignore                ← فایل‌های ignore شده
-├── 📄 .dockerignore             ← فایل‌های exclude شده از Docker
-├── 📄 README.md                 ← مستندات اصلی
-├── 📄 FILE_STRUCTURE.md         ← این فایل!
+├── 📄 requirements.txt          ← Package installation (GPU)
+├── 📄 requirements-cpu.txt      ← Package installation (CPU)
+├── 📄 docker-compose.yml        ← Docker execution (GPU)
+├── 📄 docker-compose.cpu.yml    ← Additional settings for CPU
+├── 📄 Dockerfile.jupyter        ← Jupyter with GPU
+├── 📄 Dockerfile.jupyter.cpu    ← Jupyter without GPU
+├── 📄 Makefile                  ← Quick commands
+├── 📄 pyproject.toml            ← Python settings
+├── 📄 .env.example              ← Environment settings example
+├── 📄 .gitignore                ← Ignored files
+├── 📄 .dockerignore             ← Files excluded from Docker
+├── 📄 README.md                 ← Main documentation
+├── 📄 FILE_STRUCTURE.md         ← This file!
 │
 ├── 📁 app/                      ← Backend API
-│   ├── 📄 Dockerfile            ← Docker برای API (GPU)
-│   ├── 📄 Dockerfile.cpu        ← Docker برای API (CPU)
-│   ├── 📄 requirements.txt      ← پکیج‌های API
-│   ├── 📄 main.py               ← نقاط API
-│   ├── 📄 services.py           ← منطق کسب‌وکار
-│   ├── 📄 config.py             ← تنظیمات
-│   ├── 📄 schemas.py            ← مدل‌های Pydantic
-│   └── 📁 models/               ← wrapper های مدل
+│   ├── 📄 Dockerfile            ← Docker for API (GPU)
+│   ├── 📄 Dockerfile.cpu        ← Docker for API (CPU)
+│   ├── 📄 requirements.txt      ← API packages
+│   ├── 📄 main.py               ← API endpoints
+│   ├── 📄 services.py           ← Business logic
+│   ├── 📄 config.py             ← Settings
+│   ├── 📄 schemas.py            ← Pydantic models
+│   └── 📁 models/               ← Model wrappers
 │
 ├── 📁 frontend/                 ← Streamlit Dashboard
-│   ├── 📄 Dockerfile            ← Docker برای Frontend
-│   ├── 📄 requirements.txt      ← پکیج‌های Frontend
-│   ├── 📄 Home.py               ← صفحه اصلی
-│   └── 📁 pages/                ← صفحات داشبورد
+│   ├── 📄 Dockerfile            ← Docker for Frontend
+│   ├── 📄 requirements.txt      ← Frontend packages
+│   ├── 📄 Home.py               ← Main page
+│   └── 📁 pages/                ← Dashboard pages
 │
-├── 📁 data/                     ← فایل‌های داده (CSV)
+├── 📁 data/                     ← Data files (CSV)
 │   ├── 📄 README.md
-│   ├── 📄 orders.csv            ← (باید اضافه کنی)
-│   ├── 📄 crm.csv               ← (باید اضافه کنی)
-│   └── 📄 order_comments.csv    ← (باید اضافه کنی)
+│   ├── 📄 orders.csv            ← (You need to add)
+│   ├── 📄 crm.csv               ← (You need to add)
+│   └── 📄 order_comments.csv    ← (You need to add)
 │
-├── 📁 db/                       ← پایگاه داده
-│   ├── 📄 schema.sql            ← ساختار جداول
-│   └── 📄 load_data.py          ← بارگذاری داده‌ها
+├── 📁 db/                       ← Database
+│   ├── 📄 schema.sql            ← Table structure
+│   └── 📄 load_data.py          ← Data loading
 │
 ├── 📁 mlops/                    ← MLflow Tracking
-│   ├── 📄 tracker.py            ← کلاس tracking
-│   ├── 📄 compare.py            ← مقایسه آزمایش‌ها
-│   └── 📄 config.py             ← تنظیمات MLOps
+│   ├── 📄 tracker.py            ← Tracking class
+│   ├── 📄 compare.py            ← Experiment comparison
+│   └── 📄 config.py             ← MLOps settings
 │
-├── 📁 models_v2/                ← مدل‌های آموزش دیده
-│   ├── 📄 xgboost_1order.pkl    ← مدل XGBoost
-│   ├── 📄 ft_transformer.pt     ← مدل FT-Transformer
+├── 📁 models_v2/                ← Trained models
+│   ├── 📄 xgboost_1order.pkl    ← XGBoost model
+│   ├── 📄 ft_transformer.pt     ← FT-Transformer model
 │   └── 📄 scaler.pkl            ← Scaler
 │
 ├── 📁 notebooks/                ← Jupyter Notebooks
 │
-├── 📁 src/                      ← کد منبع ML
-│   ├── 📁 data/                 ← پردازش داده
-│   ├── 📁 models/               ← تعریف مدل‌ها
-│   ├── 📁 training/             ← آموزش
-│   ├── 📁 evaluation/           ← ارزیابی
-│   └── 📁 visualization/        ← نمودارها
+├── 📁 src/                      ← ML source code
+│   ├── 📁 data/                 ← Data processing
+│   ├── 📁 models/               ← Model definitions
+│   ├── 📁 training/             ← Training
+│   ├── 📁 evaluation/           ← Evaluation
+│   └── 📁 visualization/        ← Charts
 │
-├── 📁 tests/                    ← تست‌ها
+├── 📁 tests/                    ← Tests
 │
-└── 📁 reports/                  ← گزارش‌های تولید شده
+└── 📁 reports/                  ← Generated reports
 ```
 
----
+***
 
-## 📋 فایل‌های ریشه (Root Files)
+## 📋 Root Files
 
-| فایل | محل | توضیحات |
-|------|-----|---------|
-| `requirements.txt` | `/` (ریشه پروژه) | پکیج‌های Python برای GPU |
-| `requirements-cpu.txt` | `/` (ریشه پروژه) | پکیج‌های Python برای CPU |
-| `docker-compose.yml` | `/` (ریشه پروژه) | تنظیمات Docker با GPU |
-| `docker-compose.cpu.yml` | `/` (ریشه پروژه) | override برای CPU |
-| `Dockerfile.jupyter` | `/` (ریشه پروژه) | Jupyter با GPU |
-| `Dockerfile.jupyter.cpu` | `/` (ریشه پروژه) | Jupyter بدون GPU |
-| `Makefile` | `/` (ریشه پروژه) | دستورات make |
-| `pyproject.toml` | `/` (ریشه پروژه) | تنظیمات ابزارها |
-| `.env.example` | `/` (ریشه پروژه) | نمونه .env |
-| `.gitignore` | `/` (ریشه پروژه) | فایل‌های git ignore |
-| `.dockerignore` | `/` (ریشه پروژه) | فایل‌های docker ignore |
-| `README.md` | `/` (ریشه پروژه) | مستندات اصلی |
+| File | Location | Description |
+|------|----------|-------------|
+| `requirements.txt` | `/` (project root) | Python packages for GPU |
+| `requirements-cpu.txt` | `/` (project root) | Python packages for CPU |
+| `docker-compose.yml` | `/` (project root) | Docker settings with GPU |
+| `docker-compose.cpu.yml` | `/` (project root) | Override for CPU |
+| `Dockerfile.jupyter` | `/` (project root) | Jupyter with GPU |
+| `Dockerfile.jupyter.cpu` | `/` (project root) | Jupyter without GPU |
+| `Makefile` | `/` (project root) | Make commands |
+| `pyproject.toml` | `/` (project root) | Tool settings |
+| `.env.example` | `/` (project root) | .env example |
+| `.gitignore` | `/` (project root) | Git ignored files |
+| `.dockerignore` | `/` (project root) | Docker ignored files |
+| `README.md` | `/` (project root) | Main documentation |
 
----
+***
 
-## 📁 پوشه app/ (Backend API)
+## 📁 app/ Folder (Backend API)
 
-| فایل | محل | توضیحات |
-|------|-----|---------|
-| `Dockerfile` | `/app/` | Docker image برای API با GPU |
-| `Dockerfile.cpu` | `/app/` | Docker image برای API بدون GPU |
-| `requirements.txt` | `/app/` | پکیج‌های مورد نیاز API |
+| File | Location | Description |
+|------|----------|-------------|
+| `Dockerfile` | `/app/` | Docker image for API with GPU |
+| `Dockerfile.cpu` | `/app/` | Docker image for API without GPU |
+| `requirements.txt` | `/app/` | Required API packages |
 
----
+***
 
-## 📁 پوشه frontend/ (Dashboard)
+## 📁 frontend/ Folder (Dashboard)
 
-| فایل | محل | توضیحات |
-|------|-----|---------|
-| `Dockerfile` | `/frontend/` | Docker image برای Streamlit |
-| `requirements.txt` | `/frontend/` | پکیج‌های Streamlit |
+| File | Location | Description |
+|------|----------|-------------|
+| `Dockerfile` | `/frontend/` | Docker image for Streamlit |
+| `requirements.txt` | `/frontend/` | Streamlit packages |
 
----
+***
 
-## 🚀 نحوه استفاده
+## 🚀 How to Use
 
-### ۱. کپی کردن .env
+### 1. Copy .env
 
 ```bash
 cp .env.example .env
 ```
 
-### ۲. اجرا با GPU
+### 2. Run with GPU
 
 ```bash
 make up
-# یا
+# or
 docker-compose up -d
 ```
 
-### ۳. اجرا بدون GPU (CPU)
+### 3. Run without GPU (CPU)
 
 ```bash
 make up-cpu
-# یا
+# or
 docker-compose -f docker-compose.yml -f docker-compose.cpu.yml up -d
 ```
 
-### ۴. اجرا در حالت توسعه (با Jupyter و PgAdmin)
+### 4. Run in development mode (with Jupyter and PgAdmin)
 
 ```bash
-# با GPU
+# With GPU
 make dev
 
-# بدون GPU
+# Without GPU
 make dev-cpu
 ```
 
----
+***
 
-## 🔗 آدرس‌های سرویس‌ها
+## 🔗 Service URLs
 
-| سرویس | آدرس | توضیحات |
-|-------|------|---------|
-| Frontend | http://localhost:8501 | داشبورد Streamlit |
-| API Docs | http://localhost:9000/docs | مستندات FastAPI |
-| MLflow | http://localhost:5000 | ردیابی آزمایش‌ها |
-| Jupyter | http://localhost:8888 | نوت‌بوک (token: churn123) |
-| PgAdmin | http://localhost:5050 | مدیریت دیتابیس |
-| PostgreSQL | localhost:5432 | دیتابیس |
+| Service | URL | Description |
+|---------|-----|-------------|
+| Frontend | http://localhost:8501 | Streamlit dashboard |
+| API Docs | http://localhost:9000/docs | FastAPI documentation |
+| MLflow | http://localhost:5000 | Experiment tracking |
+| Jupyter | http://localhost:8888 | Notebook (token: churn123) |
+| PgAdmin | http://localhost:5050 | Database management |
+| PostgreSQL | localhost:5432 | Database |
 
----
+***
 
-## ❓ سوالات متداول
+## ❓ Frequently Asked Questions
 
-### چرا دو فایل Dockerfile هست؟
+### Why are there two Dockerfiles?
 
-- `Dockerfile` = با پشتیبانی GPU (CUDA 12.8)
-- `Dockerfile.cpu` = بدون GPU (سبک‌تر و سریع‌تر برای build)
+- `Dockerfile` = with GPU support (CUDA 12.8)
+- `Dockerfile.cpu` = without GPU (lighter and faster to build)
 
-### چرا دو فایل docker-compose هست؟
+### Why are there two docker-compose files?
 
-- `docker-compose.yml` = تنظیمات اصلی با GPU
-- `docker-compose.cpu.yml` = override می‌کنه و GPU رو غیرفعال می‌کنه
+- `docker-compose.yml` = main settings with GPU
+- `docker-compose.cpu.yml` = overrides and disables GPU
 
-### چرا دو فایل requirements هست؟
+### Why are there two requirements files?
 
-- `requirements.txt` = با `torch==2.9.0+cu128` (نیاز به GPU)
-- `requirements-cpu.txt` = با `torch==2.9.0+cpu` (بدون نیاز به GPU)
+- `requirements.txt` = with `torch==2.9.0+cu128` (requires GPU)
+- `requirements-cpu.txt` = with `torch==2.9.0+cpu` (no GPU required)
 
----
+***
 
-## 🛠️ عیب‌یابی
+## 🛠️ Troubleshooting
 
-### خطای GPU
+### GPU Error
 
 ```bash
-# چک کردن GPU
+# Check GPU
 nvidia-smi
 
-# اگه GPU نداری از نسخه CPU استفاده کن
+# If you don't have GPU, use CPU version
 make up-cpu
 ```
 
-### خطای Port in use
+### Port in use Error
 
 ```bash
-# متوقف کردن همه container ها
+# Stop all containers
 make down
 
-# یا تغییر پورت در .env
+# Or change port in .env
 API_PORT=9001
 ```
 
-### خطای Permission denied
+### Permission denied Error
 
 ```bash
-# روی Linux/Mac
+# On Linux/Mac
 chmod +x scripts/*.sh
 sudo chown -R $USER:$USER .
 ```

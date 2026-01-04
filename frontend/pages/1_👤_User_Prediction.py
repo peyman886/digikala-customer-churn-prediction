@@ -58,7 +58,7 @@ def get_segment_from_orders(total_orders: int) -> str:
 def create_gauge_chart(probability: float, risk_level: str) -> go.Figure:
     """Create probability gauge chart."""
     risk_color = get_risk_color(risk_level)
-    
+
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
         value=probability * 100,
@@ -71,9 +71,9 @@ def create_gauge_chart(probability: float, risk_level: str) -> go.Figure:
             'borderwidth': 2,
             'bordercolor': '#e2e8f0',
             'steps': [
-                {'range': [0, 40], 'color': f"{COLORS['success']}22"},
-                {'range': [40, 70], 'color': f"{COLORS['warning']}22"},
-                {'range': [70, 100], 'color': f"{COLORS['danger']}22"}
+                {'range': [0, 40], 'color': 'rgba(16, 185, 129, 0.13)'},
+                {'range': [40, 70], 'color': 'rgba(245, 158, 11, 0.13)'},
+                {'range': [70, 100], 'color': 'rgba(239, 68, 68, 0.13)'}
             ],
             'threshold': {
                 'line': {'color': risk_color, 'width': 4},
@@ -82,42 +82,46 @@ def create_gauge_chart(probability: float, risk_level: str) -> go.Figure:
             }
         }
     ))
-    
+
     fig.update_layout(
         height=250,
         margin=dict(l=20, r=20, t=30, b=20),
         paper_bgcolor='rgba(0,0,0,0)',
         font={'color': COLORS['dark']}
     )
-    
+
     return fig
 
 
 def create_user_radar_chart(profile: dict, lang: str = "en") -> go.Figure:
     """Create radar chart for user profile."""
-    # Normalize metrics to 0-100 scale
     categories = [
-        ("Orders" if lang == "en" else "سفارشات", min(profile.get('total_orders', 0) / 50 * 100, 100)),
-        ("Tenure" if lang == "en" else "عمر", min(profile.get('customer_tenure_days', 0) / 365 * 100, 100)),
-        ("OTD Rate" if lang == "en" else "تحویل به‌موقع", profile.get('on_time_ratio', 0) * 100),
-        ("Shop Rating" if lang == "en" else "امتیاز فروشگاه", profile.get('avg_shop_rating', 0) / 5 * 100),
-        ("Engagement" if lang == "en" else "تعامل", min(profile.get('comment_count', 0) / 10 * 100, 100)),
+        ("Orders" if lang == "en" else "سفارشات",
+         min(profile.get('total_orders', 0) / 50 * 100, 100)),
+        ("Tenure" if lang == "en" else "عمر",
+         min(profile.get('tenure_days', 0) / 365 * 100, 100)),
+        ("OTD Rate" if lang == "en" else "تحویل به‌موقع",
+         profile.get('otd_rate', 0) * 100),
+        ("Shop Rating" if lang == "en" else "امتیاز فروشگاه",
+         profile.get('avg_rate_shop', 0) / 5 * 100),
+        ("Engagement" if lang == "en" else "تعامل",
+         min(profile.get('total_comments', 0) / 10 * 100, 100)),
     ]
-    
+
     labels = [c[0] for c in categories]
     values = [c[1] for c in categories]
-    
+
     fig = go.Figure()
-    
+
     fig.add_trace(go.Scatterpolar(
-        r=values + [values[0]],  # Close the shape
+        r=values + [values[0]],
         theta=labels + [labels[0]],
         fill='toself',
-        fillcolor=f"{COLORS['primary']}33",
+        fillcolor='rgba(37, 99, 235, 0.2)',
         line=dict(color=COLORS['primary'], width=2),
         name='User Profile'
     ))
-    
+
     fig.update_layout(
         polar=dict(
             radialaxis=dict(visible=True, range=[0, 100]),
@@ -128,19 +132,19 @@ def create_user_radar_chart(profile: dict, lang: str = "en") -> go.Figure:
         margin=dict(l=60, r=60, t=40, b=40),
         paper_bgcolor='rgba(0,0,0,0)'
     )
-    
+
     return fig
 
 
-def create_recency_comparison(user_recency: int, segment: str) -> go.Figure:
+def create_recency_comparison(user_recency: int, segment: str, lang: str = "en") -> go.Figure:
     """Create bar chart comparing user recency to segment threshold."""
     threshold = SEGMENT_INFO[segment]['threshold_days']
-    
+
     colors = [
         COLORS['danger'] if user_recency > threshold else COLORS['success'],
         COLORS['secondary']
     ]
-    
+
     fig = go.Figure(data=[
         go.Bar(
             x=[
@@ -153,7 +157,7 @@ def create_recency_comparison(user_recency: int, segment: str) -> go.Figure:
             textposition='outside'
         )
     ])
-    
+
     fig.update_layout(
         height=250,
         margin=dict(l=20, r=20, t=30, b=40),
@@ -161,7 +165,7 @@ def create_recency_comparison(user_recency: int, segment: str) -> go.Figure:
         showlegend=False,
         paper_bgcolor='rgba(0,0,0,0)'
     )
-    
+
     return fig
 
 
@@ -202,7 +206,7 @@ if predict_btn and user_id:
     with st.spinner(t.loading):
         prediction_resp = api_client.predict_user(user_id.strip())
         profile_resp = api_client.get_user_profile(user_id.strip())
-    
+
     if not prediction_resp.success:
         if prediction_resp.error == "not_found":
             st.error(f"❌ {t.user_not_found}: {user_id}")
@@ -211,186 +215,138 @@ if predict_btn and user_id:
     else:
         prediction = prediction_resp.data
         profile = profile_resp.data if profile_resp.success else {}
-        
+
         # Determine segment
         total_orders = profile.get('total_orders', prediction.get('total_orders', 1))
         segment = get_segment_from_orders(total_orders)
         threshold = SEGMENT_INFO[segment]['threshold_days']
-        
+
         risk_level = prediction['risk_level']
         risk_color = get_risk_color(risk_level)
         risk_emoji = get_risk_emoji(risk_level)
-        
+
         # =====================================================================
-        # Result Header
+        # Result Header - Simple Streamlit Approach
         # =====================================================================
-        
+
         st.subheader(t.prediction_result)
-        
-        # Main result box
-        st.markdown(f"""
-        <div style='
-            background: linear-gradient(90deg, {risk_color}22 0%, transparent 100%);
-            border-left: 5px solid {risk_color};
-            padding: 25px;
-            border-radius: 10px;
-            margin: 20px 0;
-        '>
-            <div style='display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;'>
-                <div>
-                    <h2 style='margin: 0; color: {risk_color};'>
-                        {risk_emoji} {t.risk_level}: {risk_level}
-                    </h2>
-                    <p style='margin: 10px 0 0 0; color: #64748b;'>
-                        User ID: <b>{prediction['user_id']}</b> | 
-                        Segment: {segment_badge(segment)}
-                    </p>
-                </div>
-                <div style='text-align: right;'>
-                    <h1 style='margin: 0; color: {risk_color}; font-size: 2.5em;'>
-                        {prediction['probability']*100:.1f}%
-                    </h1>
-                    <p style='margin: 0; color: #64748b;'>{t.churn_probability}</p>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
+
+        # Create a container with custom styling
+        result_container = st.container()
+        with result_container:
+            result_col1, result_col2 = st.columns([2, 1])
+
+            with result_col1:
+                st.markdown(f"## {risk_emoji} {t.risk_level}: {risk_level}")
+                st.markdown(f"**User ID:** {prediction['user_id']} | **Segment:** {segment}")
+
+            with result_col2:
+                st.markdown(f"<h1 style='text-align: center; color: {risk_color}; font-size: 3em; margin: 0;'>{prediction['probability']*100:.1f}%</h1>", unsafe_allow_html=True)
+                st.markdown(f"<p style='text-align: center; color: #64748b;'>{t.churn_probability}</p>", unsafe_allow_html=True)
+
+        st.markdown("---")
+
         # =====================================================================
         # Metrics Row
         # =====================================================================
-        
+
         col1, col2, col3, col4 = st.columns(4)
-        
+
         with col1:
             churn_text = (t.yes + " ⚠️") if prediction['will_churn'] else (t.no + " ✅")
             st.metric(t.will_churn, churn_text)
-        
+
         with col2:
             st.metric(t.user_segment, segment)
-        
+
         with col3:
             st.metric(t.churn_threshold, f"{threshold} {t.days}")
-        
+
         with col4:
             model = prediction.get('model_used', 'XGBoost' if total_orders == 1 else 'FT-Transformer')
             st.metric(t.model_used, model)
-        
+
         st.markdown("---")
-        
+
         # =====================================================================
         # Visualizations
         # =====================================================================
-        
+
         col_left, col_right = st.columns(2)
-        
+
         with col_left:
             st.subheader("📊 " + t.churn_probability)
             fig_gauge = create_gauge_chart(prediction['probability'], risk_level)
-            st.plotly_chart(fig_gauge, use_container_width=True)
-        
+            st.plotly_chart(fig_gauge, use_container_width=True, key="gauge_chart")
+
         with col_right:
             st.subheader("📅 " + ("Recency vs Threshold" if lang == "en" else "رسنسی در مقابل آستانه"))
-            recency = profile.get('days_since_last_order', prediction.get('recency', 0))
-            fig_recency = create_recency_comparison(recency, segment)
-            st.plotly_chart(fig_recency, use_container_width=True)
-        
+            recency = profile.get('recency', prediction.get('recency', 0))
+            fig_recency = create_recency_comparison(recency, segment, lang)
+            st.plotly_chart(fig_recency, use_container_width=True, key="recency_chart")
+
         # =====================================================================
         # User Profile
         # =====================================================================
-        
+
         if profile:
             st.markdown("---")
             st.subheader(t.user_profile)
-            
+
             col1, col2 = st.columns([2, 1])
-            
+
             with col1:
                 # Profile metrics in grid
                 m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-                
+
                 with m_col1:
                     st.metric(t.total_orders, profile.get('total_orders', 'N/A'))
-                    st.metric(t.recency_days, profile.get('days_since_last_order', 'N/A'))
-                
+                    st.metric(t.recency_days, profile.get('recency', 'N/A'))
+
                 with m_col2:
-                    tenure = profile.get('customer_tenure_days', 0)
+                    tenure = profile.get('tenure_days', 0)
                     st.metric(t.tenure_days, f"{tenure} {t.days}")
-                    st.metric("📆 " + ("Last 30d" if lang == "en" else "۳۰ روز اخیر"), 
-                             profile.get('orders_last_30d', 'N/A'))
-                
+
                 with m_col3:
-                    otd = profile.get('on_time_ratio', 0)
+                    otd = profile.get('otd_rate', 0)
                     st.metric(t.otd_rate, format_percentage(otd))
-                    st.metric(t.avg_shop_rating, f"{profile.get('avg_shop_rating', 0):.1f} ⭐")
-                
+                    st.metric(t.avg_shop_rating, f"{profile.get('avg_rate_shop', 0):.1f} ⭐")
+
                 with m_col4:
-                    st.metric(t.crm_requests, profile.get('total_complaints', 0))
-                    st.metric(t.comment_count, profile.get('comment_count', 0))
-            
+                    st.metric(t.crm_requests, profile.get('total_crm_requests', 0))
+                    st.metric(t.comment_count, profile.get('total_comments', 0))
+
             with col2:
                 # Radar chart
                 fig_radar = create_user_radar_chart(profile, lang)
-                st.plotly_chart(fig_radar, use_container_width=True)
-        
+                st.plotly_chart(fig_radar, use_container_width=True, key="radar_chart")
+
         # =====================================================================
         # Segment Context
         # =====================================================================
-        
+
         st.markdown("---")
         st.subheader("📈 " + ("Segment Context" if lang == "en" else "متن سگمنت"))
-        
+
         seg_info = SEGMENT_INFO[segment]
-        
+
         col1, col2, col3 = st.columns(3)
-        
+
         with col1:
-            st.markdown(f"""
-            <div style='
-                background: {SEGMENT_COLORS[segment]}11;
-                border: 1px solid {SEGMENT_COLORS[segment]}44;
-                padding: 15px;
-                border-radius: 10px;
-                text-align: center;
-            '>
-                <p style='margin: 0; color: #64748b;'>{"Segment Churn Rate" if lang == "en" else "نرخ ریزش سگمنت"}</p>
-                <h2 style='margin: 5px 0; color: {SEGMENT_COLORS[segment]};'>{seg_info['churn_rate']*100:.1f}%</h2>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            seg_label = "Segment Churn Rate" if lang == "en" else "نرخ ریزش سگمنت"
+            st.metric(seg_label, f"{seg_info['churn_rate']*100:.1f}%")
+
         with col2:
-            st.markdown(f"""
-            <div style='
-                background: {COLORS['secondary']}11;
-                border: 1px solid {COLORS['secondary']}44;
-                padding: 15px;
-                border-radius: 10px;
-                text-align: center;
-            '>
-                <p style='margin: 0; color: #64748b;'>{"% of All Users" if lang == "en" else "% از کل کاربران"}</p>
-                <h2 style='margin: 5px 0; color: {COLORS['secondary']};'>{seg_info['weight']*100:.1f}%</h2>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            users_label = "% of All Users" if lang == "en" else "% از کل کاربران"
+            st.metric(users_label, f"{seg_info['weight']*100:.1f}%")
+
         with col3:
             # Compare user to segment
             user_prob = prediction['probability']
             seg_rate = seg_info['churn_rate']
             diff = user_prob - seg_rate
-            diff_color = COLORS['danger'] if diff > 0 else COLORS['success']
-            
-            st.markdown(f"""
-            <div style='
-                background: {diff_color}11;
-                border: 1px solid {diff_color}44;
-                padding: 15px;
-                border-radius: 10px;
-                text-align: center;
-            '>
-                <p style='margin: 0; color: #64748b;'>{"vs Segment Avg" if lang == "en" else "نسبت به میانگین"}</p>
-                <h2 style='margin: 5px 0; color: {diff_color};'>{diff*100:+.1f}%</h2>
-            </div>
-            """, unsafe_allow_html=True)
+            diff_label = "vs Segment Avg" if lang == "en" else "نسبت به میانگین"
+            st.metric(diff_label, f"{diff*100:+.1f}%")
         
         # =====================================================================
         # Recommendations

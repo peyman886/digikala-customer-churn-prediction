@@ -142,24 +142,26 @@ curl http://localhost:9000/health
 
 ### Predict Churn
 ```bash
-curl -X POST http://localhost:9000/predict \
+curl -X POST http://localhost:9000/api/predict \
   -H "Content-Type: application/json" \
-  -d '{"user_id": 12345}'
+  -d '{"user_id": "1385028"}'
 ```
 
 Response:
 ```json
 {
-  "user_id": 12345,
-  "churn_probability": 0.73,
-  "risk_level": "high",
+  "user_id": "1385028",
+  "probability": 0.2931,
+  "will_churn": false,
+  "risk_level": "LOW",
   "model_used": "ft_transformer"
 }
 ```
 
 ### Get High-Risk Users
 ```bash
-curl "http://localhost:9000/users/high-risk?limit=10"
+curl "http://localhost:9000/api/users/at-risk?risk_level=high&limit=10"
+
 ```
 
 ## 🧠 Dual-Model Strategy
